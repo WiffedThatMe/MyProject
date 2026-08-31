@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Coupon Game Plan</title>
-  <meta name="description" content="Build the best-value shopping cart from coupons, store prices, and your budget." />
+  <meta name="description" content="Build the best-value shopping cart from store prices, Rollbacks, coupons, Ibotta, Fetch, and your budget." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,7 +13,7 @@
       <div>
         <div class="eyebrow">Coupon Game Plan</div>
         <h1>Get the most for your money.</h1>
-        <p>Pick a store, set your budget, and let the app build the best-value cart.</p>
+        <p>Compare store prices, sales, Rollbacks, coupons, Ibotta and Fetch in one cart.</p>
       </div>
       <div class="header-badge">Bang for your buck</div>
     </div>
@@ -24,7 +24,7 @@
       <div class="section-head">
         <div>
           <h2>Build My Best Deal</h2>
-          <p>Simple inputs. Clear shopping plan.</p>
+          <p>Tell it your budget. It ranks the cart by true net value.</p>
         </div>
       </div>
 
@@ -32,6 +32,7 @@
         <label>
           Store
           <select id="store">
+            <option value="Compare">Compare All Stores</option>
             <option value="DG">Dollar General</option>
             <option value="Walmart">Walmart</option>
             <option value="Kroger">Kroger</option>
@@ -56,6 +57,14 @@
         </label>
       </div>
 
+      <div class="rewards-block">
+        <div class="label">Include rewards</div>
+        <div class="reward-grid">
+          <label class="reward-chip"><input id="useIbotta" type="checkbox" checked><span><strong>Ibotta</strong><small>Cash back after purchase</small></span></label>
+          <label class="reward-chip"><input id="useFetch" type="checkbox" checked><span><strong>Fetch</strong><small>Points shown separately</small></span></label>
+        </div>
+      </div>
+
       <div class="needs-block">
         <div class="label">What do you want?</div>
         <div class="chip-grid">
@@ -78,51 +87,47 @@
       </div>
 
       <button id="build" class="primary" type="button">Build My Best Cart</button>
-      <p class="small-note">Current version uses demo item-price records. The website structure is ready for live retailer price/coupon feeds.</p>
+      <p class="small-note">Demo data for now. Rollback, Ibotta and Fetch fields are built into the calculator so live offers can be plugged in later.</p>
     </section>
 
     <section class="summary-grid">
-      <article class="stat">
-        <span>Shelf value</span>
-        <strong id="retail">$0.00</strong>
-      </article>
-      <article class="stat">
-        <span>You pay</span>
-        <strong id="pay">$0.00</strong>
-      </article>
-      <article class="stat">
-        <span>You save</span>
-        <strong id="save">$0.00</strong>
-      </article>
-      <article class="stat">
-        <span>Savings</span>
-        <strong id="rate">0%</strong>
-      </article>
+      <article class="stat"><span>Shelf value</span><strong id="retail">$0.00</strong></article>
+      <article class="stat"><span>Checkout</span><strong id="pay">$0.00</strong></article>
+      <article class="stat"><span>Cash back</span><strong id="cashback">$0.00</strong></article>
+      <article class="stat featured"><span>Net cost</span><strong id="net">$0.00</strong></article>
+      <article class="stat"><span>Total savings</span><strong id="save">$0.00</strong></article>
+      <article class="stat"><span>Savings</span><strong id="rate">0%</strong></article>
+    </section>
+
+    <section id="comparePanel" class="panel compare-panel" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Store Comparison</h2>
+          <p>Same budget and needs, compared side-by-side.</p>
+        </div>
+      </div>
+      <div id="comparison" class="comparison-grid"></div>
     </section>
 
     <section class="panel">
       <div class="section-head">
         <div>
           <h2>Your Shopping Game Plan</h2>
-          <p>Exactly what to buy and why it made the cart.</p>
+          <p>Exactly what to buy, what you pay, and what comes back later.</p>
         </div>
         <button id="clear" class="secondary" type="button">Clear</button>
       </div>
 
-      <div id="summaryText" class="callout">
-        Choose a store and budget, then build your cart.
-      </div>
-
-      <div id="cart" class="cart-list empty">
-        <div class="empty-state">Your recommended items will appear here.</div>
-      </div>
+      <div id="summaryText" class="callout">Choose one store or Compare All Stores, set your budget, then build your cart.</div>
+      <div id="rewardSummary" class="reward-summary"></div>
+      <div id="cart" class="cart-list empty"><div class="empty-state">Your recommended items will appear here.</div></div>
     </section>
 
     <section class="panel">
       <div class="section-head">
         <div>
           <h2>Best Deals</h2>
-          <p>Ranked by final value, not just coupon size.</p>
+          <p>Ranked using final net cost, not just the coupon amount.</p>
         </div>
         <input id="search" class="search" type="search" placeholder="Search deals..." />
       </div>
@@ -130,22 +135,17 @@
     </section>
 
     <section class="panel explainer">
-      <h2>How it works</h2>
+      <h2>How savings are counted</h2>
       <div class="steps">
-        <div><b>1</b><span><strong>Checks the price</strong><small>Uses the selected store's item price.</small></span></div>
-        <div><b>2</b><span><strong>Applies discounts</strong><small>Counts sale savings and coupons.</small></span></div>
-        <div><b>3</b><span><strong>Compares value</strong><small>Looks at final cost versus product value.</small></span></div>
-        <div><b>4</b><span><strong>Builds your cart</strong><small>Stays within your budget.</small></span></div>
+        <div><b>1</b><span><strong>Store price</strong><small>Starts with shelf price.</small></span></div>
+        <div><b>2</b><span><strong>Sale / Rollback</strong><small>Uses the lower advertised store price.</small></span></div>
+        <div><b>3</b><span><strong>Coupons</strong><small>Reduces checkout cost when eligible.</small></span></div>
+        <div><b>4</b><span><strong>Ibotta + Fetch</strong><small>Ibotta lowers net cost. Fetch points stay visible separately.</small></span></div>
       </div>
     </section>
   </main>
 
-  <footer>
-    <div class="wrap">
-      Prototype website. Retailer prices, availability, and coupon eligibility can vary by store and location.
-    </div>
-  </footer>
-
+  <footer><div class="wrap">Prototype website. Retailer prices, Rollbacks, offer eligibility, Ibotta cash back and Fetch points can vary by account, store, location and date. Fetch points are not treated as cash at checkout.</div></footer>
   <script src="app.js"></script>
 </body>
 </html>
