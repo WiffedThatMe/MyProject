@@ -313,3 +313,14 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
   .shared-location-row{grid-template-columns:1fr}
   .nearest-stores{grid-template-columns:1fr}
 }
+
+.location-actions{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:12px;align-items:center}
+.location-button{min-height:48px;padding-left:22px;padding-right:22px}
+.location-or{color:#777;text-align:center}
+.nearest-store-card .distance{margin-top:5px;font-weight:600;color:#173d32}
+.location-working{opacity:.72;pointer-events:none}
+@media(max-width:760px){
+  .location-actions{grid-template-columns:1fr}
+  .location-or{display:none}
+  .location-button{width:100%}
+}

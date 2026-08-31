@@ -505,3 +505,74 @@ function restoreSharedZip(){
 if(el('applySharedZip')) el('applySharedZip').addEventListener('click',applySharedZip);
 if(el('sharedZip')) el('sharedZip').addEventListener('keydown',e=>{if(e.key==='Enter')applySharedZip()});
 setTimeout(restoreSharedZip,50);
+
+
+const CURRENT_LOCATION_KEY='couponGamePlan.currentLocation.v1';
+
+function saveCurrentLocation(lat,lon){
+  localStorage.setItem(CURRENT_LOCATION_KEY,JSON.stringify({lat,lon,savedAt:Date.now()}));
+}
+function getCurrentLocation(){
+  try{return JSON.parse(localStorage.getItem(CURRENT_LOCATION_KEY)||'null')}catch{return null}
+}
+async function nearestKrogerByCoords(lat,lon){
+  try{
+    const r=await fetch(`/api/kroger/locations?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`,{cache:'no-store',credentials:'same-origin'});
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Kroger lookup failed');
+    const rows=Array.isArray(data.data)?data.data:[];
+    if(!rows.length)return null;
+    const x=rows[0],a=x.address||{};
+    const addr=[a.addressLine1,a.city,a.state,a.zipCode].filter(Boolean).join(', ');
+    const store={locationId:x.locationId,name:x.name||x.chain||'Kroger',address:addr};
+    localStorage.setItem(KROGER_STORE_KEY,JSON.stringify(store));
+    restoreKrogerStore();
+    return store;
+  }catch{return null}
+}
+function geoStoreCard(name,s){
+  if(!s) return `<div class="nearest-store-card"><strong>${name}</strong><div class="meta">No nearby store could be verified.</div></div>`;
+  return `<div class="nearest-store-card"><strong>${s.name||name}</strong><div class="meta">${s.address||'Address unavailable'}</div>${Number.isFinite(s.distanceMiles)?`<div class="distance">${s.distanceMiles} miles away</div>`:''}</div>`;
+}
+async function useCurrentLocation(){
+  const btn=el('useCurrentLocation'),status=el('sharedLocationStatus'),box=el('nearestStores');
+  if(!navigator.geolocation){
+    status.textContent='This browser does not support location access. Use ZIP instead.';
+    return;
+  }
+  btn.classList.add('location-working'); btn.textContent='Finding Your Location…';
+  status.textContent='Waiting for location permission…';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    saveCurrentLocation(lat,lon);
+    localStorage.removeItem(SHARED_ZIP_KEY);
+    status.textContent='Location found. Finding the nearest stores…';
+    box.innerHTML=['Dollar General','Walmart','Kroger'].map(n=>geoStoreCard(n,null)).join('');
+    try{
+      const [publicStores,kroger]=await Promise.all([
+        fetch(`/api/nearby-stores?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`,{cache:'no-store'}).then(r=>r.json()),
+        nearestKrogerByCoords(lat,lon)
+      ]);
+      box.innerHTML=
+        geoStoreCard('Dollar General',publicStores?.stores?.dg)+
+        geoStoreCard('Walmart',publicStores?.stores?.walmart)+
+        geoStoreCard('Kroger',kroger);
+      status.textContent='Using your current location. These nearest stores will be used for shopping comparisons.';
+      await refreshDealFeed();
+      if(kroger) await loadKrogerLivePrices();
+    }catch(e){
+      status.textContent='Your location was saved, but some nearby stores could not be verified right now.';
+    }finally{
+      btn.classList.remove('location-working');btn.textContent='Use My Current Location';
+    }
+  },err=>{
+    const messages={
+      1:'Location permission was denied. You can still use ZIP.',
+      2:'Your location could not be determined. You can still use ZIP.',
+      3:'Location lookup timed out. Try again or use ZIP.'
+    };
+    status.textContent=messages[err.code]||'Could not get your location. Use ZIP instead.';
+    btn.classList.remove('location-working');btn.textContent='Use My Current Location';
+  },{enableHighAccuracy:false,timeout:12000,maximumAge:300000});
+}
+if(el('useCurrentLocation')) el('useCurrentLocation').addEventListener('click',useCurrentLocation);
