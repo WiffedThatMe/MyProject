@@ -1,4 +1,4 @@
-const products = [
+let products = [
   {store:'DG',name:'Tide Liquid Detergent',cat:'Laundry',price:15.95,sale:15.95,coupon:3.00,ibotta:0,fetch:0},
   {store:'DG',name:'Gain Laundry Care',cat:'Laundry',price:10.95,sale:10.00,coupon:2.00,ibotta:1.00,fetch:500},
   {store:'DG',name:'Angel Soft Toilet Paper',cat:'Paper',price:8.95,sale:7.95,coupon:1.50,ibotta:0.50,fetch:0},
@@ -170,3 +170,55 @@ el('anything').addEventListener('change', () => { if(el('anything').checked) doc
 el('store').addEventListener('change', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); renderDeals(); });
 el('goal').addEventListener('change', buildCart); el('build').addEventListener('click', buildCart); el('clear').addEventListener('click', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); }); el('search').addEventListener('input', renderDeals);
 renderDeals(); renderCart();
+
+
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+let lastRefreshAt = null;
+let refreshTimer = null;
+
+function formatRefreshTime(date) {
+  return new Intl.DateTimeFormat(undefined, {hour:'numeric', minute:'2-digit', second:'2-digit'}).format(date);
+}
+
+function setFreshness(state, message) {
+  const dot = el('freshnessDot');
+  const status = el('freshnessStatus');
+  const updated = el('lastUpdated');
+  if (!dot || !status || !updated) return;
+  dot.className = 'freshness-dot ' + state;
+  status.textContent = message;
+  updated.textContent = lastRefreshAt ? `Last checked ${formatRefreshTime(lastRefreshAt)} · auto-refresh every 5 min` : 'Waiting for first refresh';
+}
+
+async function refreshDealFeed({silent=false}={}) {
+  const btn = el('refreshDeals');
+  if (btn) { btn.disabled = true; btn.classList.add('refreshing'); }
+  if (!silent) setFreshness('checking','Checking current deals…');
+  try {
+    // This endpoint is the handoff point for a live retailer/reward backend.
+    // If it is not present yet, the app keeps the bundled deal set instead of pretending it changed.
+    const response = await fetch(`/api/deals?ts=${Date.now()}`, {cache:'no-store'});
+    if (!response.ok) throw new Error(`Deal feed unavailable (${response.status})`);
+    const payload = await response.json();
+    if (!payload || !Array.isArray(payload.products)) throw new Error('Invalid deal feed');
+    products = payload.products;
+    lastRefreshAt = new Date(payload.updatedAt || Date.now());
+    setFreshness('fresh','Deals refreshed');
+    if (cart.length) buildCart(); else { renderDeals(); renderCart(); }
+  } catch (err) {
+    lastRefreshAt = new Date();
+    setFreshness('limited','Live feed not connected yet');
+    if (!silent) console.warn(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('refreshing'); }
+  }
+}
+
+function startDealRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => refreshDealFeed({silent:true}), REFRESH_INTERVAL_MS);
+}
+
+if (el('refreshDeals')) el('refreshDeals').addEventListener('click', () => refreshDealFeed());
+setFreshness('limited','Live feed not connected yet');
+startDealRefresh();
