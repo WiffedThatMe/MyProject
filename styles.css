@@ -301,3 +301,15 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
 .kroger-store-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:12px}
 .kroger-store-row input,#krogerStoreSelect{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid rgba(23,61,50,.2);border-radius:10px;background:#fff;color:#1d241f}
 #krogerStoreSelect{margin-top:10px}
+
+.location-panel{margin-bottom:20px}
+.shared-location-row{display:grid;grid-template-columns:minmax(140px,220px) auto;gap:10px;align-items:center}
+.shared-location-row input{width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid rgba(23,61,50,.22);border-radius:10px;background:#fff;color:#1d241f;font-size:16px}
+.nearest-stores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.nearest-store-card{padding:12px 14px;border:1px solid rgba(23,61,50,.12);border-radius:12px;background:rgba(255,255,255,.72)}
+.nearest-store-card strong{display:block;margin-bottom:4px}
+.nearest-store-card .meta{font-size:.88rem}
+@media(max-width:700px){
+  .shared-location-row{grid-template-columns:1fr}
+  .nearest-stores{grid-template-columns:1fr}
+}

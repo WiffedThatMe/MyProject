@@ -313,7 +313,7 @@ async function refreshDealFeed({silent=false}={}) {
   try {
     // This endpoint is the handoff point for a live retailer/reward backend.
     // If it is not present yet, the app keeps the bundled deal set instead of pretending it changed.
-    const response = await fetch(`/api/deals?ts=${Date.now()}`, {cache:'no-store'});
+    const response = await fetch(`/api/deals?ts=${Date.now()}&zip=${encodeURIComponent(getSharedZip()||'')}`, {cache:'no-store'});
     if (!response.ok) throw new Error(`Deal feed unavailable (${response.status})`);
     const payload = await response.json();
     if (!payload || !Array.isArray(payload.products)) throw new Error('Invalid deal feed');
@@ -440,3 +440,68 @@ async function loadKrogerLivePrices(){
 }
 if(el('findKrogerStores')) el('findKrogerStores').addEventListener('click',findKrogerStores);
 if(el('krogerStoreSelect')) el('krogerStoreSelect').addEventListener('change',chooseKrogerStore);
+
+
+const SHARED_ZIP_KEY='couponGamePlan.sharedZip.v1';
+
+function getSharedZip(){
+  return (localStorage.getItem(SHARED_ZIP_KEY)||'').replace(/\D/g,'').slice(0,5);
+}
+function setSharedZip(zip){
+  localStorage.setItem(SHARED_ZIP_KEY,zip);
+}
+function renderNearestStoreCard(key,store){
+  const names={dg:'Dollar General',walmart:'Walmart',kroger:'Kroger'};
+  const title=names[key]||store?.name||key;
+  const address=store?.address||'Finding nearest store…';
+  return `<div class="nearest-store-card"><strong>${title}</strong><div class="meta">${address}</div></div>`;
+}
+async function resolveNearestKroger(zip){
+  try{
+    const r=await fetch(`/api/kroger/locations?zip=${encodeURIComponent(zip)}`,{cache:'no-store',credentials:'same-origin'});
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'Kroger lookup failed');
+    const rows=Array.isArray(data.data)?data.data:[];
+    if(!rows.length) return null;
+    const x=rows[0], a=x.address||{};
+    const address=[a.addressLine1,a.city,a.state,a.zipCode].filter(Boolean).join(', ');
+    const store={locationId:x.locationId,name:x.name||x.chain||'Kroger',address};
+    localStorage.setItem(KROGER_STORE_KEY,JSON.stringify(store));
+    restoreKrogerStore();
+    return store;
+  }catch{
+    return null;
+  }
+}
+async function applySharedZip(){
+  const input=el('sharedZip'), status=el('sharedLocationStatus'), box=el('nearestStores');
+  const zip=(input?.value||'').replace(/\D/g,'').slice(0,5);
+  if(zip.length!==5){ if(status) status.textContent='Enter a 5-digit ZIP code.'; return; }
+  setSharedZip(zip);
+  status.textContent=`Using ${zip} for Dollar General, Walmart, and Kroger. Finding nearest stores…`;
+  box.innerHTML=['dg','walmart','kroger'].map(k=>renderNearestStoreCard(k,null)).join('');
+  try{
+    const [all,kroger]=await Promise.all([
+      fetch(`/api/locations?zip=${encodeURIComponent(zip)}`,{cache:'no-store'}).then(async r=>{const d=await r.json(); if(!r.ok)throw new Error(d.error||'Location lookup failed'); return d}),
+      resolveNearestKroger(zip)
+    ]);
+    if(kroger) all.stores.kroger={name:kroger.name,address:kroger.address,verified:true};
+    box.innerHTML=['dg','walmart','kroger'].map(k=>renderNearestStoreCard(k,all.stores?.[k])).join('');
+    status.textContent=`Using ZIP ${zip}. The nearest available store for each retailer will be used automatically.`;
+    await refreshDealFeed();
+    if(kroger) await loadKrogerLivePrices();
+  }catch(e){
+    status.textContent=`ZIP ${zip} saved. ${e.message||'Some store locations could not be confirmed.'}`;
+    await refreshDealFeed();
+  }
+}
+function restoreSharedZip(){
+  const zip=getSharedZip(), input=el('sharedZip');
+  if(zip && input){
+    input.value=zip;
+    applySharedZip();
+  }
+}
+if(el('applySharedZip')) el('applySharedZip').addEventListener('click',applySharedZip);
+if(el('sharedZip')) el('sharedZip').addEventListener('keydown',e=>{if(e.key==='Enter')applySharedZip()});
+setTimeout(restoreSharedZip,50);

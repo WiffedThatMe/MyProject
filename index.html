@@ -34,6 +34,22 @@
 
 
   <main class="wrap">
+    <section class="panel location-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Shopping Location</p>
+          <h2>Use one ZIP for every store</h2>
+          <p class="meta">We’ll use this ZIP to choose the nearest available Dollar General, Walmart, and Kroger locations and price deals for the same area.</p>
+        </div>
+      </div>
+      <div class="shared-location-row">
+        <input id="sharedZip" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP code">
+        <button id="applySharedZip" class="secondary" type="button">Use This ZIP</button>
+      </div>
+      <div id="sharedLocationStatus" class="meta"></div>
+      <div id="nearestStores" class="nearest-stores"></div>
+    </section>
+
     <section class="panel builder">
       <div class="section-head">
         <div>
@@ -117,7 +133,7 @@
           <div class="account-brand"><span class="account-mark">K</span><div><strong>Kroger</strong><small id="krogerAccountNote">Checking connection…</small></div></div>
           <div id="krogerAccountActions" class="account-actions"><button class="secondary" type="button" disabled>Checking…</button></div>
           <div id="krogerSetupNote" class="account-setup-note" hidden></div>
-          <div id="krogerStoreTools" class="account-setup-note" hidden>
+          <div id="krogerStoreTools" class="account-setup-note" hidden style="display:none">
             <strong>Choose your Kroger store</strong>
             <div class="kroger-store-row">
               <input id="krogerZip" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP code">
