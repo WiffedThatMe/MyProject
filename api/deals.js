@@ -49,26 +49,83 @@ function usDate(m,d,y){
 }
 function source(label,ok,count=0,message=''){ return {label,ok,count,message}; }
 
+function absoluteUrl(u,base){
+  if(!u) return null;
+  try{return new URL(decode(u),base).href}catch{return null}
+}
+function firstImage(html,base){
+  const candidates=[];
+  const attrs=[...html.matchAll(/<(?:img|source)[^>]+(?:src|data-src|srcset)=["']([^"']+)["']/gi)];
+  for(const m of attrs){
+    const raw=(m[1]||'').split(/\s+/)[0];
+    const u=absoluteUrl(raw,base);
+    if(u && !/logo|icon|sprite|placeholder|transparent|pixel/i.test(u)) candidates.push(u);
+  }
+  const og=html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+  if(og){const u=absoluteUrl(og[1],base);if(u)candidates.push(u)}
+  return candidates[0]||null;
+}
+function couponFacts(block){
+  const spend=block.match(/(?:spend|purchase(?: of)?|when you spend)\s*\$([0-9]+(?:\.[0-9]{1,2})?)/i);
+  const qty=block.match(/(?:buy|when you buy|purchase)\s+(\d+)\b/i);
+  const limit=block.match(/limit\s+(\d+)/i);
+  let couponKind='Coupon';
+  if(/DG Store/i.test(block)) couponKind='DG Store Coupon';
+  else if(/manufacturer/i.test(block)) couponKind='Manufacturer Coupon';
+  else if(/cash back/i.test(block)) couponKind='Cash Back';
+  return {
+    minimumSpend:spend?Number(spend[1]):null,
+    quantity:qty?Number(qty[1]):null,
+    limit:limit?Number(limit[1]):null,
+    couponKind
+  };
+}
+function simpleCouponSummary({amount,bogo,minimumSpend,quantity,couponKind}){
+  if(bogo) return 'Buy the qualifying item and get the second eligible item free or included, subject to the offer terms.';
+  const bits=[];
+  if(amount) bits.push(`Save $${Number(amount).toFixed(amount%1?2:0)}`);
+  if(quantity) bits.push(`when you buy ${quantity}`);
+  if(minimumSpend) bits.push(`after spending $${Number(minimumSpend).toFixed(minimumSpend%1?2:0)}`);
+  if(!bits.length) bits.push(couponKind||'Coupon offer');
+  return bits.join(' ') + '.';
+}
+
 function parseDG(html){
-  const text=plain(html);
   const out=[];
-  const chunks=text.split(/Digital Coupon|Cash Back/i).slice(1);
-  for(const raw of chunks.slice(0,500)){
-    const block=clean(raw.slice(0,600));
+  // Keep raw HTML chunks so product/coupon images can be associated with each offer.
+  const pieces=html.split(/(?=Digital Coupon|Cash Back)/i).slice(0,800);
+  for(const raw of pieces){
+    const block=clean(plain(raw.slice(0,14000))).slice(0,1100);
+    if(!/Digital Coupon|Cash Back|Save|Earn|BOGO|Buy One/i.test(block)) continue;
     const amountMatch=block.match(/(?:Save|Earn)\s*\$([0-9]+(?:\.[0-9]{1,2})?)/i);
     const dateMatch=block.match(/(?:EXP\s*)?(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/(\d{2,4})/i);
     const bogo=/Buy One, Get One|BOGO/i.test(block);
     if(!amountMatch && !bogo) continue;
-    let title=clean(block.split(/Save|Earn|Buy One, Get One|BOGO/i)[0]).slice(0,100);
-    if(!title) title='Dollar General offer';
+
+    let title=clean(
+      block.replace(/^.*?(?:Digital Coupon|Cash Back)\s*/i,'')
+           .split(/Save\s*\$|Earn\s*\$|Buy One, Get One|BOGO/i)[0]
+    ).slice(0,120);
+    if(!title || title.length<3) title='Dollar General offer';
+
+    const facts=couponFacts(block);
+    const amount=amountMatch?Number(amountMatch[1]):0;
+    const imageUrl=firstImage(raw,DG_COUPONS);
+    const description=simpleCouponSummary({amount,bogo,...facts});
     out.push({
       store:'DG',
-      type:bogo?'Promotion':'Digital Coupon',
+      type:bogo?'Promotion':facts.couponKind,
       title,
-      amount:amountMatch?Number(amountMatch[1]):0,
+      amount,
       bogo,
-      details:block.slice(0,360),
+      description,
+      minimumSpend:facts.minimumSpend,
+      quantity:facts.quantity,
+      limit:facts.limit,
+      couponKind:facts.couponKind,
+      details:block.slice(0,800),
       couponEnd:dateMatch?usDate(dateMatch[1],dateMatch[2],dateMatch[3]):null,
+      imageUrl,
       sourceUrl:DG_COUPONS
     });
   }
@@ -89,7 +146,7 @@ function jsonLdProducts(html,store,cat,sourceUrl){
         const offer=Array.isArray(x.offers)?x.offers[0]:x.offers;
         const price=num(offer?.price ?? offer?.lowPrice ?? x.price);
         if(x.name && price && price<1000){
-          out.push({store,name:clean(x.name).slice(0,140),cat,price,sale:price,coupon:0,ibotta:0,fetch:0,sourceUrl,live:true});
+          out.push({store,name:clean(x.name).slice(0,140),cat,price,sale:price,coupon:0,ibotta:0,fetch:0,sourceUrl,live:true,imageUrl:absoluteUrl(Array.isArray(x.image)?x.image[0]:x.image,sourceUrl),description:clean(x.description||'').slice(0,260)});
         }
         Object.values(x).forEach(walk);
       };
@@ -131,7 +188,7 @@ function parseKroger(html,cat,url){
   const months={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
   while((m=promoRx.exec(text)) && promos.length<100){
     const mon=m[2].slice(0,3), yr=new Date().getFullYear();
-    promos.push({store:'Kroger',type:'Promotion',title:clean(m[1]),amount:0,details:clean(m[1]),couponEnd:`${yr}-${String(months[mon]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`,sourceUrl:url});
+    promos.push({store:'Kroger',type:'Promotion',title:clean(m[1]),amount:0,description:clean(m[1]),details:clean(m[1]),couponKind:'Kroger Promotion',couponEnd:`${yr}-${String(months[mon]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`,imageUrl:firstImage(html,url),sourceUrl:url});
   }
   return {products,promos};
 }

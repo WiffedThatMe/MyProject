@@ -132,6 +132,17 @@ function renderSourceCoverage() {
   const order=['dg','walmart','kroger','ibotta','fetch'];
   box.innerHTML=order.map(k=>{ const s=sourceCoverage[k]; if(!s) return ''; return `<span class="source-pill ${s.ok?'source-ok':'source-limited'}"><b>${s.ok?'✓':'!'}</b> ${s.label}${s.ok&&s.count?` · ${s.count}`:''}</span>`; }).join('');
 }
+
+function esc(s=''){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function couponImage(p){
+  if(p.imageUrl) return `<img class="coupon-image" src="${esc(p.imageUrl)}" alt="${esc(p.title||'Coupon product')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.coupon-image-wrap').classList.add('image-failed');this.remove()">`;
+  return '';
+}
+function couponFact(label,value){
+  if(value===null||value===undefined||value==='') return '';
+  return `<div class="coupon-fact"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+}
+
 function promotionTiming(p){
   if(!p.couponEnd) return ''; const d=daysUntil(p.couponEnd);
   if(d===null) return ''; if(d<0) return `Expired ${shortDate(p.couponEnd)}`; if(d===0) return 'Expires today'; if(d===1) return 'Expires tomorrow'; return `Expires ${shortDate(p.couponEnd)} · ${d} days left`;
@@ -140,8 +151,45 @@ function renderPromotions(){
   const box=el('promotions'); if(!box) return; const filter=el('promotionStore')?.value||'All';
   const rows=promotions.filter(p=>(filter==='All'||p.store===filter)&&(!p.couponEnd||daysUntil(p.couponEnd)>=0)).sort((a,b)=>{ const ad=daysUntil(a.couponEnd), bd=daysUntil(b.couponEnd); return (ad??9999)-(bd??9999); });
   if(!rows.length){ box.innerHTML='<div class="empty-state">No live promotions were readable from the selected source on this refresh.</div>'; return; }
-  box.innerHTML=rows.map(p=>`<article class="promotion-card"><div><span class="store-badge">${storeNames[p.store]||p.store}</span><span class="badge coupon">${p.type||'Offer'}</span></div><h3>${p.title}</h3>${p.amount?`<div class="save">${money(p.amount)} value</div>`:''}<p class="meta">${p.details||''}</p>${promotionTiming(p)?`<span class="badge expiry ${daysUntil(p.couponEnd)<=2?'urgent':''}">${promotionTiming(p)}</span>`:''}${p.sourceUrl?`<a class="source-link" href="${p.sourceUrl}" target="_blank" rel="noopener">Official source</a>`:''}</article>`).join('');
+
+  box.innerHTML=rows.map(p=>{
+    const timing=promotionTiming(p);
+    const summary=p.description || (p.amount?`Save ${money(p.amount)} on qualifying items.`:'See the offer details below.');
+    const spend=p.minimumSpend?money(p.minimumSpend):null;
+    const qty=p.quantity?String(p.quantity):null;
+    const limit=p.limit?String(p.limit):null;
+    return `<article class="promotion-card visual-coupon">
+      <div class="coupon-image-wrap ${p.imageUrl?'':'no-image'}">
+        ${couponImage(p)}
+        <div class="coupon-image-fallback"><span>${esc((storeNames[p.store]||p.store).slice(0,2))}</span><small>Offer</small></div>
+      </div>
+      <div class="coupon-main">
+        <div class="coupon-labels">
+          <span class="store-badge">${esc(storeNames[p.store]||p.store)}</span>
+          <span class="badge coupon">${esc(p.couponKind||p.type||'Offer')}</span>
+        </div>
+        <h3>${esc(p.title)}</h3>
+        ${p.amount?`<div class="save">${money(p.amount)} savings</div>`:''}
+        <p class="coupon-summary">${esc(summary)}</p>
+        <div class="coupon-facts">
+          ${couponFact('Buy',qty)}
+          ${couponFact('Minimum spend',spend)}
+          ${couponFact('Limit',limit)}
+          ${couponFact('Expires',p.couponEnd?shortDate(p.couponEnd):null)}
+        </div>
+        ${timing?`<span class="badge expiry ${daysUntil(p.couponEnd)<=2?'urgent':''}">${esc(timing)}</span>`:''}
+        <details class="coupon-details">
+          <summary>View coupon details</summary>
+          <div class="coupon-detail-body">
+            <p>${esc(p.details||summary)}</p>
+            ${p.sourceUrl?`<a class="source-link" href="${esc(p.sourceUrl)}" target="_blank" rel="noopener">Open official offer source</a>`:''}
+          </div>
+        </details>
+      </div>
+    </article>`;
+  }).join('');
 }
+
 function selectedNeeds() {
   if (el('anything').checked) return [];
   return [...document.querySelectorAll('.need:checked')].map(x => x.value);
@@ -420,7 +468,8 @@ function krogerProductToApp(x,cat){
   const item=(x.items||[])[0]||{}, price=item.price||{}, regular=Number(price.regular||0), promo=Number(price.promo||0);
   const sale=promo>0?promo:regular;
   if(!regular&&!sale)return null;
-  return {store:'Kroger',name:x.description||x.brand||'Kroger item',cat,price:regular||sale,sale:sale||regular,coupon:0,ibotta:0,fetch:0,upc:x.upc||x.productId,source:'Kroger API',live:true};
+  const imgs=Array.isArray(x.images)?x.images:[], preferred=imgs.find(i=>i.perspective==='front')||imgs[0]||{}, sizes=Array.isArray(preferred.sizes)?preferred.sizes:[], im=(sizes.find(s=>/large|medium/i.test(s.size))||sizes[0]||{}).url||preferred.url||null;
+  return {store:'Kroger',name:x.description||x.brand||'Kroger item',cat,price:regular||sale,sale:sale||regular,coupon:0,ibotta:0,fetch:0,upc:x.upc||x.productId,source:'Kroger API',live:true,imageUrl:im,description:[x.brand,item.size].filter(Boolean).join(' · ')};
 }
 async function loadKrogerLivePrices(){
   const s=selectedKrogerStore(); if(!s)return;
