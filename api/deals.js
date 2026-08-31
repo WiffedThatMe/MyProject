@@ -20,8 +20,8 @@ const HEADERS = {
 };
 
 function htmlDecode(s='') { return s.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ').replace(/&reg;/g,'®').replace(/&trade;/g,'™'); }
-function textOnly(html='') { return htmlDecode(html.replace(/<script[\\s\\S]*?<\\/script>/gi,' ').replace(/<style[\\s\\S]*?<\\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim()); }
-function cleanName(s='') { return s.replace(/\\s+/g,' ').replace(/^[-–—|: ]+|[-–—|: ]+$/g,'').trim(); }
+function textOnly(html='') { return htmlDecode(html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()); }
+function cleanName(s='') { return s.replace(/\s+/g,' ').replace(/^[-–—|: ]+|[-–—|: ]+$/g,'').trim(); }
 function moneyNum(v) { const n=Number(String(v||'').replace(/[$,]/g,'')); return Number.isFinite(n)?n:null; }
 function isoFromUS(m,d,y) { const yy=Number(y)<100?2000+Number(y):Number(y); return `${yy}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
 
