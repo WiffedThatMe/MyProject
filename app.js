@@ -1,13 +1,13 @@
 let products = [
-  {store:'DG',name:'Tide Liquid Detergent',cat:'Laundry',price:15.95,sale:15.95,coupon:3.00,ibotta:0,fetch:0},
+  {store:'DG',name:'Tide Liquid Detergent',cat:'Laundry',price:15.95,sale:15.95,coupon:3.00,ibotta:0,fetch:0,couponEnd:'2026-09-05'},
   {store:'DG',name:'Gain Laundry Care',cat:'Laundry',price:10.95,sale:10.00,coupon:2.00,ibotta:1.00,fetch:500},
   {store:'DG',name:'Angel Soft Toilet Paper',cat:'Paper',price:8.95,sale:7.95,coupon:1.50,ibotta:0.50,fetch:0},
   {store:'DG',name:'Sparkle Paper Towels',cat:'Paper',price:7.50,sale:6.75,coupon:1.00,ibotta:0,fetch:750},
   {store:'DG',name:'Mtn Dew 12 Pack',cat:'Drinks',price:8.00,sale:7.00,coupon:2.00,ibotta:0,fetch:500},
   {store:'DG',name:'Gatorade Multipack',cat:'Drinks',price:8.50,sale:7.50,coupon:1.50,ibotta:1.00,fetch:0},
   {store:'DG',name:'Dixie Plates',cat:'Household',price:6.50,sale:5.50,coupon:1.50,ibotta:0,fetch:600},
-  {store:'DG',name:'Febreze Air',cat:'Cleaning',price:4.00,sale:4.00,coupon:2.00,ibotta:1.00,fetch:250},
-  {store:'DG',name:'Cap’n Crunch Cereal',cat:'Food',price:4.00,sale:3.50,coupon:1.00,ibotta:0.50,fetch:400},
+  {store:'DG',name:'Febreze Air',cat:'Cleaning',price:4.00,sale:4.00,coupon:2.00,ibotta:1.00,fetch:250,couponEnd:'2026-09-26'},
+  {store:'DG',name:'Cap’n Crunch Cereal',cat:'Food',price:4.00,sale:3.50,coupon:1.00,ibotta:0.50,fetch:400,couponEnd:'2026-09-19'},
   {store:'DG',name:'White Castle Sliders',cat:'Food',price:6.25,sale:5.75,coupon:0.50,ibotta:1.00,fetch:0},
   {store:'Walmart',name:'Great Value Eggs 12 ct',cat:'Food',price:2.48,sale:2.48,rollback:false,coupon:0,ibotta:0,fetch:0},
   {store:'Walmart',name:'Great Value Bread',cat:'Food',price:1.42,sale:1.42,rollback:false,coupon:0,ibotta:0,fetch:0},
@@ -34,6 +34,92 @@ const fetchPoints = p => el('useFetch').checked ? (p.fetch || 0) : 0;
 const netPrice = p => Math.max(0, checkoutPrice(p) - ibottaBack(p));
 const itemSavings = p => Math.max(0, p.price - netPrice(p));
 const itemSavingsPct = p => p.price ? itemSavings(p) / p.price : 0;
+const HISTORY_KEY = 'couponGamePlan.priceHistory.v1';
+const HISTORY_MAX_PER_ITEM = 180;
+const productKey = p => `${p.store}::${(p.upc || p.name || '').toLowerCase().trim()}`;
+
+function parseLocalDate(value) {
+  if (!value) return null;
+  const d = new Date(`${value}T23:59:59`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function shortDate(value) {
+  const d = parseLocalDate(value);
+  return d ? new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',year:'numeric'}).format(d) : '';
+}
+function daysUntil(value) {
+  const d = parseLocalDate(value);
+  if (!d) return null;
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.ceil((d-now)/86400000);
+}
+function couponTiming(p) {
+  if (!p.coupon || !p.couponEnd) return '';
+  const days = daysUntil(p.couponEnd);
+  if (days === null) return '';
+  if (days < 0) return `Expired ${shortDate(p.couponEnd)}`;
+  if (days === 0) return `Expires today`;
+  if (days === 1) return `Expires tomorrow`;
+  return `Expires ${shortDate(p.couponEnd)} · ${days} days left`;
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}') || {}; }
+  catch { return {}; }
+}
+function saveHistory(data) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(data)); } catch {}
+}
+function recordPriceHistory(list, source='app') {
+  const history = loadHistory();
+  const now = Date.now();
+  list.forEach(p => {
+    const key = productKey(p);
+    if (!key || !Number.isFinite(Number(p.sale))) return;
+    const rows = Array.isArray(history[key]) ? history[key] : [];
+    const current = {at:now, store:p.store, name:p.name, shelf:Number(p.price||0), sale:Number(p.sale||0), coupon:Number(p.coupon||0), checkout:checkoutPrice(p), net:netPrice(p), source};
+    const last = rows[rows.length-1];
+    const priceChanged = !last || last.shelf !== current.shelf || last.sale !== current.sale || last.coupon !== current.coupon || last.checkout !== current.checkout || last.net !== current.net;
+    const dayOld = !last || (now-last.at) >= 86400000;
+    if (priceChanged || dayOld) rows.push(current);
+    history[key] = rows.slice(-HISTORY_MAX_PER_ITEM);
+  });
+  saveHistory(history);
+  renderHistory();
+}
+function historyStats(p) {
+  const rows = loadHistory()[productKey(p)] || [];
+  if (!rows.length) return null;
+  const salePrices = rows.map(x=>Number(x.sale)).filter(Number.isFinite);
+  const netPrices = rows.map(x=>Number(x.net)).filter(Number.isFinite);
+  const avg = salePrices.reduce((a,b)=>a+b,0)/salePrices.length;
+  return {rows, low:Math.min(...salePrices), high:Math.max(...salePrices), avg, bestNet:Math.min(...netPrices), latest:rows[rows.length-1]};
+}
+function historyComparison(p) {
+  const stats = historyStats(p);
+  if (!stats || stats.rows.length < 2) return '';
+  const diff = stats.avg - p.sale;
+  if (Math.abs(diff) < .01) return `At tracked average`;
+  return diff > 0 ? `${money(diff)} below tracked average` : `${money(Math.abs(diff))} above tracked average`;
+}
+function renderHistory() {
+  const list = el('historyList');
+  const summary = el('historySummary');
+  if (!list || !summary) return;
+  const history = loadHistory();
+  const entries = Object.values(history).filter(Array.isArray).flatMap(rows => rows.length ? [{key:`${rows[0].store}::${rows[0].name}`, rows}] : []);
+  if (!entries.length) {
+    summary.textContent = 'Price history starts saving automatically as deals are refreshed.';
+    list.innerHTML = '<div class="empty-state">No tracked price history yet.</div>';
+    return;
+  }
+  summary.textContent = `${entries.length} items tracked on this device. A new record is kept when the price changes or at least once per day.`;
+  list.innerHTML = entries.sort((a,b)=>(b.rows.at(-1)?.at||0)-(a.rows.at(-1)?.at||0)).slice(0,12).map(entry => {
+    const rows=entry.rows; const latest=rows.at(-1); const vals=rows.map(r=>r.sale); const low=Math.min(...vals); const high=Math.max(...vals); const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+    const recent=rows.slice(-6).reverse().map(r=>`<li><span>${new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'}).format(new Date(r.at))}</span><strong>${money(r.sale)}</strong><small>${r.coupon ? ` · ${money(r.coupon)} coupon` : ''}</small></li>`).join('');
+    return `<article class="history-card"><span class="store-badge">${storeNames[latest.store]||latest.store}</span><h3>${latest.name}</h3><div class="history-stats"><div><span>Lowest</span><strong>${money(low)}</strong></div><div><span>Average</span><strong>${money(avg)}</strong></div><div><span>Highest</span><strong>${money(high)}</strong></div><div><span>Today</span><strong>${money(latest.sale)}</strong></div></div><details><summary>Recent prices (${rows.length})</summary><ul class="history-rows">${recent}</ul></details></article>`;
+  }).join('');
+}
 let cart = [];
 let comparisonResults = [];
 
@@ -101,7 +187,11 @@ function buildCart() {
 function badges(p) {
   const tags = [];
   if (p.store === 'Walmart' && p.rollback) tags.push('<span class="badge rollback">Rollback</span>');
-  if (p.coupon > 0) tags.push(`<span class="badge coupon">Coupon ${money(p.coupon)}</span>`);
+  if (p.coupon > 0) {
+    tags.push(`<span class="badge coupon">Coupon ${money(p.coupon)}</span>`);
+    const timing = couponTiming(p);
+    if (timing) tags.push(`<span class="badge expiry ${daysUntil(p.couponEnd) <= 2 ? 'urgent' : ''}">${timing}</span>`);
+  }
   if (ibottaBack(p) > 0) tags.push(`<span class="badge ibotta">Ibotta ${money(ibottaBack(p))}</span>`);
   if (fetchPoints(p) > 0) tags.push(`<span class="badge fetch">Fetch ${fetchPoints(p).toLocaleString()} pts</span>`);
   return tags.join(' ');
@@ -160,7 +250,10 @@ function getDealsEligible() {
 function renderDeals() {
   const query = el('search').value.trim().toLowerCase();
   const deals = getDealsEligible().filter(p => !query || (p.name+' '+p.cat+' '+storeNames[p.store]).toLowerCase().includes(query)).sort((a,b) => itemSavingsPct(b)-itemSavingsPct(a));
-  el('deals').innerHTML = deals.map(p => `<article class="deal-card"><span class="store-badge">${storeNames[p.store]}</span><h3>${p.name}</h3><div class="save">${money(netPrice(p))}</div><div class="meta">Checkout ${money(checkoutPrice(p))} · Net after rewards</div><div class="badges">${badges(p)}</div><span class="pill">${Math.round(itemSavingsPct(p)*100)}% net savings</span></article>`).join('');
+  el('deals').innerHTML = deals.map(p => {
+    const hist = historyComparison(p);
+    return `<article class="deal-card"><span class="store-badge">${storeNames[p.store]}</span><h3>${p.name}</h3><div class="save">${money(netPrice(p))}</div><div class="meta">Checkout ${money(checkoutPrice(p))} · Net after rewards${hist ? ` · <strong>${hist}</strong>` : ''}</div><div class="badges">${badges(p)}</div><span class="pill">${Math.round(itemSavingsPct(p)*100)}% net savings</span></article>`;
+  }).join('');
 }
 
 document.querySelectorAll('[data-budget]').forEach(btn => btn.addEventListener('click', () => { el('budget').value=btn.dataset.budget; buildCart(); }));
@@ -169,8 +262,12 @@ el('anything').addEventListener('change', () => { if(el('anything').checked) doc
 ['useIbotta','useFetch'].forEach(id => el(id).addEventListener('change', () => { if(cart.length) buildCart(); else renderDeals(); }));
 el('store').addEventListener('change', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); renderDeals(); });
 el('goal').addEventListener('change', buildCart); el('build').addEventListener('click', buildCart); el('clear').addEventListener('click', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); }); el('search').addEventListener('input', renderDeals);
-renderDeals(); renderCart();
+recordPriceHistory(products,'bundled');
+renderDeals(); renderCart(); renderHistory();
 
+if (el('clearHistory')) el('clearHistory').addEventListener('click', () => {
+  if (confirm('Clear all price history saved on this device?')) { localStorage.removeItem(HISTORY_KEY); renderHistory(); renderDeals(); }
+});
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 let lastRefreshAt = null;
@@ -202,6 +299,7 @@ async function refreshDealFeed({silent=false}={}) {
     const payload = await response.json();
     if (!payload || !Array.isArray(payload.products)) throw new Error('Invalid deal feed');
     products = payload.products;
+    recordPriceHistory(products,'live-refresh');
     lastRefreshAt = new Date(payload.updatedAt || Date.now());
     setFreshness('fresh','Deals refreshed');
     if (cart.length) buildCart(); else { renderDeals(); renderCart(); }
