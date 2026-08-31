@@ -117,6 +117,15 @@
           <div class="account-brand"><span class="account-mark">K</span><div><strong>Kroger</strong><small id="krogerAccountNote">Checking connection…</small></div></div>
           <div id="krogerAccountActions" class="account-actions"><button class="secondary" type="button" disabled>Checking…</button></div>
           <div id="krogerSetupNote" class="account-setup-note" hidden></div>
+          <div id="krogerStoreTools" class="account-setup-note" hidden>
+            <strong>Choose your Kroger store</strong>
+            <div class="kroger-store-row">
+              <input id="krogerZip" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP code">
+              <button id="findKrogerStores" class="secondary" type="button">Find Stores</button>
+            </div>
+            <select id="krogerStoreSelect" hidden></select>
+            <div id="krogerStoreStatus" class="meta"></div>
+          </div>
         </article>
         <article class="account-card muted-account">
           <div class="account-brand"><span class="account-mark">+</span><div><strong>More accounts</strong><small>Walmart, Dollar General, Ibotta and Fetch will be added only when a reliable supported connection is available.</small></div></div>

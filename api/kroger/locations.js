@@ -9,12 +9,9 @@ export default async function handler(req,res){
       s={...s,access_token:t.access_token,refresh_token:t.refresh_token||s.refresh_token,expires_at:Date.now()+((Number(t.expires_in)||1800)*1000)-30000,scope:t.scope||s.scope};
       res.setHeader('Set-Cookie',cookie(COOKIE_NAME,seal(s),60*60*24*30));
     }
-    const term=String(req.query.term||'').trim().slice(0,80);
-    const locationId=String(req.query.locationId||'').trim().slice(0,30);
-    if(!term) return res.status(400).json({error:'Search term required'});
-    if(!locationId) return res.status(400).json({error:'Kroger store required'});
-    const path=`/products?filter.term=${encodeURIComponent(term)}&filter.locationId=${encodeURIComponent(locationId)}&filter.limit=20`;
-    const data=await apiGet(path,s.access_token);
+    const zip=String(req.query.zip||'').replace(/\D/g,'').slice(0,5);
+    if(zip.length!==5) return res.status(400).json({error:'Enter a 5-digit ZIP code'});
+    const data=await apiGet(`/locations?filter.zipCode.near=${encodeURIComponent(zip)}&filter.radiusInMiles=50&filter.limit=20`,s.access_token);
     return res.status(200).json(data);
-  }catch(e){ return res.status(e.status||500).json({error:e.message||'Product search failed'}); }
+  }catch(e){ return res.status(e.status||500).json({error:e.message||'Location lookup failed'}); }
 }

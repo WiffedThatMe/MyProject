@@ -370,6 +370,8 @@ async function loadKrogerConnection() {
     if (data.connected) {
       note.textContent = data.profileId ? `Connected · profile ${String(data.profileId).slice(0,8)}…` : 'Connected securely';
       actions.innerHTML = '<button id="disconnectKroger" class="secondary" type="button">Disconnect</button>';
+      const tools=el('krogerStoreTools'); if(tools) tools.hidden=false;
+      restoreKrogerStore();
       const btn = el('disconnectKroger');
       if (btn) btn.addEventListener('click', async()=>{ await fetch('/api/kroger/logout',{method:'POST',credentials:'same-origin'}); loadKrogerConnection(); });
     } else {
@@ -382,3 +384,59 @@ async function loadKrogerConnection() {
   }
 }
 loadKrogerConnection();
+
+
+const KROGER_STORE_KEY='couponGamePlan.krogerStore.v1';
+function selectedKrogerStore(){ try{return JSON.parse(localStorage.getItem(KROGER_STORE_KEY)||'null')}catch{return null} }
+function restoreKrogerStore(){
+  const s=selectedKrogerStore(), status=el('krogerStoreStatus');
+  if(s&&status) status.textContent=`Using ${s.name} · ${s.address||''}`;
+}
+async function findKrogerStores(){
+  const zip=(el('krogerZip')?.value||'').replace(/\D/g,'').slice(0,5);
+  const status=el('krogerStoreStatus'), select=el('krogerStoreSelect');
+  if(zip.length!==5){ if(status) status.textContent='Enter a 5-digit ZIP code.'; return; }
+  status.textContent='Finding nearby Kroger stores…';
+  try{
+    const r=await fetch(`/api/kroger/locations?zip=${encodeURIComponent(zip)}`,{cache:'no-store',credentials:'same-origin'});
+    const data=await r.json(); if(!r.ok) throw new Error(data.error||'Store lookup failed');
+    const rows=Array.isArray(data.data)?data.data:[];
+    if(!rows.length){status.textContent='No Kroger-owned stores found nearby.';select.hidden=true;return}
+    select.innerHTML='<option value="">Choose a store…</option>'+rows.map(x=>{
+      const a=x.address||{}; const addr=[a.addressLine1,a.city,a.state,a.zipCode].filter(Boolean).join(', ');
+      return `<option value="${x.locationId}" data-name="${(x.name||x.chain||'Kroger').replace(/"/g,'&quot;')}" data-address="${addr.replace(/"/g,'&quot;')}">${x.name||x.chain||'Kroger'} — ${addr}</option>`;
+    }).join('');
+    select.hidden=false; status.textContent=`Found ${rows.length} nearby locations.`;
+  }catch(e){status.textContent=e.message}
+}
+async function chooseKrogerStore(){
+  const select=el('krogerStoreSelect'), opt=select?.selectedOptions?.[0]; if(!opt?.value)return;
+  const s={locationId:opt.value,name:opt.dataset.name||'Kroger',address:opt.dataset.address||''};
+  localStorage.setItem(KROGER_STORE_KEY,JSON.stringify(s));
+  el('krogerStoreStatus').textContent=`Using ${s.name} · ${s.address}`;
+  await loadKrogerLivePrices();
+}
+function krogerProductToApp(x,cat){
+  const item=(x.items||[])[0]||{}, price=item.price||{}, regular=Number(price.regular||0), promo=Number(price.promo||0);
+  const sale=promo>0?promo:regular;
+  if(!regular&&!sale)return null;
+  return {store:'Kroger',name:x.description||x.brand||'Kroger item',cat,price:regular||sale,sale:sale||regular,coupon:0,ibotta:0,fetch:0,upc:x.upc||x.productId,source:'Kroger API',live:true};
+}
+async function loadKrogerLivePrices(){
+  const s=selectedKrogerStore(); if(!s)return;
+  const groups=[['milk','Food'],['eggs','Food'],['bread','Food'],['pasta','Food'],['cereal','Food'],['water','Drinks'],['soda','Drinks'],['laundry detergent','Laundry'],['paper towels','Paper'],['toilet paper','Paper'],['dish soap','Cleaning']];
+  const results=await Promise.allSettled(groups.map(async([term,cat])=>{
+    const r=await fetch(`/api/kroger/products?term=${encodeURIComponent(term)}&locationId=${encodeURIComponent(s.locationId)}`,{cache:'no-store',credentials:'same-origin'});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||term);
+    return (d.data||[]).map(x=>krogerProductToApp(x,cat)).filter(Boolean);
+  }));
+  const live=results.filter(x=>x.status==='fulfilled').flatMap(x=>x.value);
+  if(live.length){
+    products=products.filter(p=>p.store!=='Kroger').concat(live);
+    recordPriceHistory(live,'kroger-api');
+    renderDeals(); if(cart.length) buildCart();
+    const st=el('krogerStoreStatus'); if(st) st.textContent=`Using ${s.name} · loaded ${live.length} live-priced Kroger items`;
+  }
+}
+if(el('findKrogerStores')) el('findKrogerStores').addEventListener('click',findKrogerStores);
+if(el('krogerStoreSelect')) el('krogerStoreSelect').addEventListener('change',chooseKrogerStore);
