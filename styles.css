@@ -348,3 +348,6 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
   .coupon-image-wrap{width:96px}
   .coupon-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+.badge.verified-recent{background:#f4ead8;color:#6e5427;border:1px solid rgba(178,138,75,.35)}
+.verified-note{margin:6px 0 10px;font-size:.82rem;color:#746c61}

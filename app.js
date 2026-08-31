@@ -167,10 +167,12 @@ function renderPromotions(){
         <div class="coupon-labels">
           <span class="store-badge">${esc(storeNames[p.store]||p.store)}</span>
           <span class="badge coupon">${esc(p.couponKind||p.type||'Offer')}</span>
+          ${p.dataMode==='verified-recent'?'<span class="badge verified-recent">Verified recent</span>':''}
         </div>
         <h3>${esc(p.title)}</h3>
         ${p.amount?`<div class="save">${money(p.amount)} savings</div>`:''}
         <p class="coupon-summary">${esc(summary)}</p>
+        ${p.dataMode==='verified-recent'&&p.verifiedAt?`<p class="verified-note">Last independently verified ${new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'}).format(new Date(p.verifiedAt))}. The official retailer source is linked below.</p>`:''}
         <div class="coupon-facts">
           ${couponFact('Buy',qty)}
           ${couponFact('Minimum spend',spend)}
