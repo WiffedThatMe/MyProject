@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupon Game Plan</title>
+  <meta name="description" content="Build the best-value shopping cart from coupons, store prices, and your budget." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div>
+        <div class="eyebrow">Coupon Game Plan</div>
+        <h1>Get the most for your money.</h1>
+        <p>Pick a store, set your budget, and let the app build the best-value cart.</p>
+      </div>
+      <div class="header-badge">Bang for your buck</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel builder">
+      <div class="section-head">
+        <div>
+          <h2>Build My Best Deal</h2>
+          <p>Simple inputs. Clear shopping plan.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Store
+          <select id="store">
+            <option value="DG">Dollar General</option>
+            <option value="Walmart">Walmart</option>
+            <option value="Kroger">Kroger</option>
+          </select>
+        </label>
+
+        <label>
+          Budget
+          <div class="money-input">
+            <span>$</span>
+            <input id="budget" type="number" min="1" max="500" step="1" value="25" />
+          </div>
+        </label>
+
+        <label>
+          Shopping goal
+          <select id="goal">
+            <option value="bang">Most product for my money</option>
+            <option value="save">Biggest total savings</option>
+            <option value="oop">Lowest out-of-pocket</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="needs-block">
+        <div class="label">What do you want?</div>
+        <div class="chip-grid">
+          <label class="chip"><input type="checkbox" class="need" value="Food"><span>Food</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Drinks"><span>Drinks</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Laundry"><span>Laundry</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Household"><span>Household</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Cleaning"><span>Cleaning</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Personal Care"><span>Personal care</span></label>
+          <label class="chip"><input type="checkbox" class="need" value="Paper"><span>Paper goods</span></label>
+          <label class="chip"><input id="anything" type="checkbox" checked><span>Anything</span></label>
+        </div>
+      </div>
+
+      <div class="quick-budgets">
+        <button type="button" data-budget="15">$15</button>
+        <button type="button" data-budget="25">$25</button>
+        <button type="button" data-budget="40">$40</button>
+        <button type="button" data-budget="50">$50</button>
+      </div>
+
+      <button id="build" class="primary" type="button">Build My Best Cart</button>
+      <p class="small-note">Current version uses demo item-price records. The website structure is ready for live retailer price/coupon feeds.</p>
+    </section>
+
+    <section class="summary-grid">
+      <article class="stat">
+        <span>Shelf value</span>
+        <strong id="retail">$0.00</strong>
+      </article>
+      <article class="stat">
+        <span>You pay</span>
+        <strong id="pay">$0.00</strong>
+      </article>
+      <article class="stat">
+        <span>You save</span>
+        <strong id="save">$0.00</strong>
+      </article>
+      <article class="stat">
+        <span>Savings</span>
+        <strong id="rate">0%</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>Your Shopping Game Plan</h2>
+          <p>Exactly what to buy and why it made the cart.</p>
+        </div>
+        <button id="clear" class="secondary" type="button">Clear</button>
+      </div>
+
+      <div id="summaryText" class="callout">
+        Choose a store and budget, then build your cart.
+      </div>
+
+      <div id="cart" class="cart-list empty">
+        <div class="empty-state">Your recommended items will appear here.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>Best Deals</h2>
+          <p>Ranked by final value, not just coupon size.</p>
+        </div>
+        <input id="search" class="search" type="search" placeholder="Search deals..." />
+      </div>
+      <div id="deals" class="deal-grid"></div>
+    </section>
+
+    <section class="panel explainer">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div><b>1</b><span><strong>Checks the price</strong><small>Uses the selected store's item price.</small></span></div>
+        <div><b>2</b><span><strong>Applies discounts</strong><small>Counts sale savings and coupons.</small></span></div>
+        <div><b>3</b><span><strong>Compares value</strong><small>Looks at final cost versus product value.</small></span></div>
+        <div><b>4</b><span><strong>Builds your cart</strong><small>Stays within your budget.</small></span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Prototype website. Retailer prices, availability, and coupon eligibility can vary by store and location.
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
