@@ -122,7 +122,26 @@ function renderHistory() {
 }
 let cart = [];
 let comparisonResults = [];
+let promotions = [];
+let sourceCoverage = null;
 
+
+function renderSourceCoverage() {
+  const box=el('sourceCoverage'); if(!box) return;
+  if(!sourceCoverage){ box.innerHTML='<span>Waiting for live source check…</span>'; return; }
+  const order=['dg','walmart','kroger','ibotta','fetch'];
+  box.innerHTML=order.map(k=>{ const s=sourceCoverage[k]; if(!s) return ''; return `<span class="source-pill ${s.ok?'source-ok':'source-limited'}"><b>${s.ok?'✓':'!'}</b> ${s.label}${s.ok&&s.count?` · ${s.count}`:''}</span>`; }).join('');
+}
+function promotionTiming(p){
+  if(!p.couponEnd) return ''; const d=daysUntil(p.couponEnd);
+  if(d===null) return ''; if(d<0) return `Expired ${shortDate(p.couponEnd)}`; if(d===0) return 'Expires today'; if(d===1) return 'Expires tomorrow'; return `Expires ${shortDate(p.couponEnd)} · ${d} days left`;
+}
+function renderPromotions(){
+  const box=el('promotions'); if(!box) return; const filter=el('promotionStore')?.value||'All';
+  const rows=promotions.filter(p=>(filter==='All'||p.store===filter)&&(!p.couponEnd||daysUntil(p.couponEnd)>=0)).sort((a,b)=>{ const ad=daysUntil(a.couponEnd), bd=daysUntil(b.couponEnd); return (ad??9999)-(bd??9999); });
+  if(!rows.length){ box.innerHTML='<div class="empty-state">No live promotions were readable from the selected source on this refresh.</div>'; return; }
+  box.innerHTML=rows.map(p=>`<article class="promotion-card"><div><span class="store-badge">${storeNames[p.store]||p.store}</span><span class="badge coupon">${p.type||'Offer'}</span></div><h3>${p.title}</h3>${p.amount?`<div class="save">${money(p.amount)} value</div>`:''}<p class="meta">${p.details||''}</p>${promotionTiming(p)?`<span class="badge expiry ${daysUntil(p.couponEnd)<=2?'urgent':''}">${promotionTiming(p)}</span>`:''}${p.sourceUrl?`<a class="source-link" href="${p.sourceUrl}" target="_blank" rel="noopener">Official source</a>`:''}</article>`).join('');
+}
 function selectedNeeds() {
   if (el('anything').checked) return [];
   return [...document.querySelectorAll('.need:checked')].map(x => x.value);
@@ -298,10 +317,14 @@ async function refreshDealFeed({silent=false}={}) {
     if (!response.ok) throw new Error(`Deal feed unavailable (${response.status})`);
     const payload = await response.json();
     if (!payload || !Array.isArray(payload.products)) throw new Error('Invalid deal feed');
-    products = payload.products;
+    if (payload.products.length) products = payload.products;
+    promotions = Array.isArray(payload.promotions) ? payload.promotions : [];
+    sourceCoverage = payload.sources || null;
     recordPriceHistory(products,'live-refresh');
+    renderPromotions(); renderSourceCoverage();
     lastRefreshAt = new Date(payload.updatedAt || Date.now());
-    setFreshness('fresh','Deals refreshed');
+    const liveCount = (payload.products?.length||0) + (payload.promotions?.length||0);
+    setFreshness(payload.live ? 'fresh' : 'limited', payload.live ? `Live sources checked · ${liveCount} records` : 'Live sources limited');
     if (cart.length) buildCart(); else { renderDeals(); renderCart(); }
   } catch (err) {
     lastRefreshAt = new Date();
@@ -318,5 +341,9 @@ function startDealRefresh() {
 }
 
 if (el('refreshDeals')) el('refreshDeals').addEventListener('click', () => refreshDealFeed());
-setFreshness('limited','Live feed not connected yet');
+renderPromotions(); renderSourceCoverage();
+if (el('promotionStore')) el('promotionStore').addEventListener('change', renderPromotions);
+setFreshness('checking','Checking live retailer sources…');
+refreshDealFeed({silent:true});
 startDealRefresh();
+\n\n// --- Secure retailer account connections ---\nasync function loadKrogerConnection() {\n  const note = el('krogerAccountNote');\n  const actions = el('krogerAccountActions');\n  const setup = el('krogerSetupNote');\n  if (!note || !actions) return;\n  try {\n    const response = await fetch('/api/kroger/status', {cache:'no-store', credentials:'same-origin'});\n    const data = await response.json();\n    if (!data.configured) {\n      note.textContent = 'Developer connection needs one-time setup';\n      actions.innerHTML = '<a class="secondary button-link" href="https://developer.kroger.com" target="_blank" rel="noopener">Create Kroger developer app</a>';\n      if (setup) {\n        setup.hidden = false;\n        setup.innerHTML = '<strong>One-time setup:</strong> register Coupon Game Plan with Kroger, then add <code>KROGER_CLIENT_ID</code>, <code>KROGER_CLIENT_SECRET</code> and <code>KROGER_SESSION_SECRET</code> in Vercel. Use <code>'+location.origin+'/api/kroger/callback</code> as the redirect URL.';\n      }\n      return;\n    }\n    if (setup) setup.hidden = true;\n    if (data.connected) {\n      note.textContent = data.profileId ? `Connected · profile ${String(data.profileId).slice(0,8)}…` : 'Connected securely';\n      actions.innerHTML = '<button id="disconnectKroger" class="secondary" type="button">Disconnect</button>';\n      const btn = el('disconnectKroger');\n      if (btn) btn.addEventListener('click', async()=>{ await fetch('/api/kroger/logout',{method:'POST',credentials:'same-origin'}); loadKrogerConnection(); });\n    } else {\n      note.textContent = 'Not connected';\n      actions.innerHTML = '<a class="primary mini-primary button-link" href="/api/kroger/connect">Connect Kroger</a>';\n    }\n  } catch (e) {\n    note.textContent = 'Connection status unavailable';\n    actions.innerHTML = '<button class="secondary" type="button" onclick="loadKrogerConnection()">Try again</button>';\n  }\n}\nloadKrogerConnection();\n

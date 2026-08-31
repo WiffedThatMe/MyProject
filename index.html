@@ -104,6 +104,26 @@
       <p class="small-note">Prices and offers can vary by store, location, account and date. Always confirm the final offer before purchase.</p>
     </section>
 
+
+    <section class="panel account-panel">
+      <div class="section-head">
+        <div>
+          <h2>Connected Accounts</h2>
+          <p>Connect retailer accounts through their own secure sign-in. Coupon Game Plan never asks for your retailer password.</p>
+        </div>
+      </div>
+      <div class="account-grid">
+        <article class="account-card">
+          <div class="account-brand"><span class="account-mark">K</span><div><strong>Kroger</strong><small id="krogerAccountNote">Checking connection…</small></div></div>
+          <div id="krogerAccountActions" class="account-actions"><button class="secondary" type="button" disabled>Checking…</button></div>
+          <div id="krogerSetupNote" class="account-setup-note" hidden></div>
+        </article>
+        <article class="account-card muted-account">
+          <div class="account-brand"><span class="account-mark">+</span><div><strong>More accounts</strong><small>Walmart, Dollar General, Ibotta and Fetch will be added only when a reliable supported connection is available.</small></div></div>
+        </article>
+      </div>
+    </section>
+
     <section class="summary-grid">
       <article class="stat"><span>Shelf value</span><strong id="retail">$0.00</strong></article>
       <article class="stat"><span>Checkout</span><strong id="pay">$0.00</strong></article>
@@ -146,6 +166,24 @@
         <input id="search" class="search" type="search" placeholder="Search deals..." />
       </div>
       <div id="deals" class="deal-grid"></div>
+    </section>
+
+
+    <section class="panel live-offers-panel">
+      <div class="section-head">
+        <div>
+          <h2>Live Coupons & Promotions</h2>
+          <p>Current store coupons, cash-back offers, multibuy deals, BOGO offers and spend-threshold promotions found by the live feed.</p>
+        </div>
+        <select id="promotionStore" class="search" aria-label="Filter promotions by store">
+          <option value="All">All stores</option>
+          <option value="DG">Dollar General</option>
+          <option value="Walmart">Walmart</option>
+          <option value="Kroger">Kroger</option>
+        </select>
+      </div>
+      <div id="sourceCoverage" class="source-coverage"><span>Waiting for live source check…</span></div>
+      <div id="promotions" class="promotion-grid"><div class="empty-state">Refresh deals to load current promotions.</div></div>
     </section>
 
     <section class="panel history-panel">
