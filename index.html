@@ -260,7 +260,31 @@
         <div><b>5</b><span><strong>Price history</strong><small>Compares today's price with the price this app has actually tracked before.</small></span></div>
       </div>
     </section>
-  </main>
+  
+    <section class="panel store-picker-panel">
+      <div class="section-head">
+        <div>
+          <h2>Shopping Stores</h2>
+          <p>If a store cannot be verified automatically, choose the location you actually shop. Your choice stays saved on this device.</p>
+        </div>
+      </div>
+      <div class="store-picker-grid">
+        <article class="store-picker-card">
+          <div><span class="store-badge">Dollar General</span><strong id="dgSelectedStore">Finding nearest store…</strong><small id="dgSelectedAddress"></small></div>
+          <button id="changeDGStore" class="secondary" type="button">Choose DG</button>
+        </article>
+        <article class="store-picker-card">
+          <div><span class="store-badge">Walmart</span><strong id="walmartSelectedStore">Finding nearest store…</strong><small id="walmartSelectedAddress"></small></div>
+          <button id="changeWalmartStore" class="secondary" type="button">Choose Walmart</button>
+        </article>
+        <article class="store-picker-card">
+          <div><span class="store-badge">Kroger</span><strong id="krogerSelectedStore">Uses connected Kroger location</strong><small id="krogerSelectedAddress"></small></div>
+        </article>
+      </div>
+      <div id="storePickerOptions" class="store-picker-options" hidden></div>
+    </section>
+
+</main>
 
   <footer><div class="wrap">Retailer prices, Rollbacks, offer eligibility, Ibotta cash back and Fetch points can vary by account, store, location and date. Fetch points are shown separately and are not treated as cash at checkout.<div class="brand-credit">Mediokore</div></div></footer>
   <script src="app.js"></script>

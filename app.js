@@ -27,6 +27,52 @@ let products = [
 
 const storeNames = {DG:'Dollar General', Walmart:'Walmart', Kroger:'Kroger'};
 const el = id => document.getElementById(id);
+
+const RETAIL_STORE_KEY='couponGamePlan.retailStores.v1';
+const FALLBACK_STORES={
+  DG:[
+    {id:'dg-foote',name:'Dollar General',address:'509 Foote St, Corinth, MS 38834'},
+    {id:'dg-cass',name:'Dollar General',address:'902 S Cass St, Corinth, MS 38834'},
+    {id:'dg-nharper',name:'Dollar General',address:'1450 N Harper Rd, Corinth, MS 38834'},
+    {id:'dg-us72',name:'Dollar General',address:'3501 US-72, Corinth, MS 38834'},
+    {id:'dg-nharperext',name:'Dollar General',address:'5620 N Harper Rd Ext, Corinth, MS 38834'},
+    {id:'dg-cr200',name:'Dollar General',address:'4137 Co Rd 200, Corinth, MS 38834'}
+  ],
+  Walmart:[
+    {id:'wm-105',name:'Walmart Supercenter #105',address:'2301 S Harper Rd, Corinth, MS 38834'}
+  ]
+};
+function loadRetailStores(){try{return JSON.parse(localStorage.getItem(RETAIL_STORE_KEY)||'{}')||{}}catch{return{}}}
+function saveRetailStores(x){localStorage.setItem(RETAIL_STORE_KEY,JSON.stringify(x))}
+function setRetailStore(store,location){
+  const all=loadRetailStores(); all[store]=location; saveRetailStores(all); renderRetailStoreChoices();
+}
+function renderRetailStoreChoices(){
+  const saved=loadRetailStores();
+  const dg=saved.DG||FALLBACK_STORES.DG[0];
+  const wm=saved.Walmart||FALLBACK_STORES.Walmart[0];
+  if(el('dgSelectedStore')) el('dgSelectedStore').textContent=dg.name;
+  if(el('dgSelectedAddress')) el('dgSelectedAddress').textContent=dg.address;
+  if(el('walmartSelectedStore')) el('walmartSelectedStore').textContent=wm.name;
+  if(el('walmartSelectedAddress')) el('walmartSelectedAddress').textContent=wm.address;
+}
+function openStorePicker(store){
+  const box=el('storePickerOptions'); if(!box)return;
+  const rows=FALLBACK_STORES[store]||[];
+  box.hidden=false;
+  box.innerHTML=`<div class="store-picker-title"><strong>Choose ${esc(storeNames[store]||store)}</strong><button type="button" class="secondary" id="closeStorePicker">Close</button></div>
+    <div class="store-choice-list">${rows.map(s=>`<button type="button" class="store-choice" data-store-choice="${esc(store)}" data-store-id="${esc(s.id)}"><strong>${esc(s.name)}</strong><span>${esc(s.address)}</span></button>`).join('')}</div>`;
+  el('closeStorePicker').addEventListener('click',()=>box.hidden=true);
+  box.querySelectorAll('[data-store-choice]').forEach(btn=>btn.addEventListener('click',()=>{
+    const loc=rows.find(x=>x.id===btn.dataset.storeId); if(loc){setRetailStore(store,loc);box.hidden=true;}
+  }));
+}
+function initRetailStorePicker(){
+  renderRetailStoreChoices();
+  if(el('changeDGStore')) el('changeDGStore').addEventListener('click',()=>openStorePicker('DG'));
+  if(el('changeWalmartStore')) el('changeWalmartStore').addEventListener('click',()=>openStorePicker('Walmart'));
+}
+
 const money = n => '$' + Math.max(0, n || 0).toFixed(2);
 const checkoutPrice = p => Math.max(0, p.sale - p.coupon);
 const ibottaBack = p => el('useIbotta').checked ? (p.ibotta || 0) : 0;
@@ -976,3 +1022,5 @@ async function useCurrentLocation(){
   },{enableHighAccuracy:false,timeout:12000,maximumAge:300000});
 }
 if(el('useCurrentLocation')) el('useCurrentLocation').addEventListener('click',useCurrentLocation);
+
+initRetailStorePicker();
