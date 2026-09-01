@@ -95,7 +95,7 @@ function alternativesFor(p){
     .filter(x=>cartKey(x)!==cartKey(p) && productFamily(x)===fam)
     .map(x=>({...x,_net:netPrice(x),_brand:brandType(x)}))
     .sort((a,b)=>a._net-b._net)
-    .slice(0,5);
+    ;
 }
 function comparisonMessage(p){
   const alts=alternativesFor(p);
@@ -522,6 +522,7 @@ function buildCart() {
     comparisonResults.sort((a,b) => compareScore(b, goal) - compareScore(a, goal));
     cart = comparisonResults[0]?.items || [];
     renderComparison();
+wireStoreListToggles(document);
   } else {
     comparisonResults = [];
     cart = buildForStore(el('store').value, budget, goal).items;
@@ -542,6 +543,28 @@ function badges(p) {
   if (fetchPoints(p) > 0) tags.push(`<span class="badge fetch">Fetch ${fetchPoints(p).toLocaleString()} pts</span>`);
   return tags.join(' ');
 }
+
+function storeItemListHtml(items, store){
+  const safeItems = Array.isArray(items) ? items : [];
+  const rows = safeItems.map((p,i)=>`<li>${i+1}. ${esc(p.name)} — ${money(netPrice(p))} net</li>`).join('');
+  return `<div class="store-result-list-wrap">
+    <ol class="store-result-list">${rows}</ol>
+    ${safeItems.length>5 ? `<button type="button" class="secondary store-list-toggle" data-store-list-toggle="${esc(store)}">Show all ${safeItems.length} items</button>` : ''}
+  </div>`;
+}
+function wireStoreListToggles(root=document){
+  root.querySelectorAll('[data-store-list-toggle]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const wrap=btn.closest('.store-result-list-wrap');
+      if(!wrap) return;
+      const list=wrap.querySelector('.store-result-list');
+      if(!list) return;
+      const expanded=wrap.classList.toggle('expanded');
+      btn.textContent=expanded ? 'Show fewer items' : `Show all ${list.children.length} items`;
+    });
+  });
+}
+
 function renderComparison() {
   const panel = el('comparePanel');
   const container = el('comparison');
@@ -559,7 +582,7 @@ function renderComparison() {
         <div><span>You save</span><strong>${money(r.savings)}</strong></div>
       </div>
       <div class="meta">${r.items.length} items · ${Math.round(r.rate*100)}% savings${r.cashBack ? ` · ${money(r.cashBack)} Ibotta` : ''}${r.points ? ` · ${r.points.toLocaleString()} Fetch pts` : ''}</div>
-      <ol class="compare-items">${r.items.slice(0,5).map(p => `<li>${p.name} — ${money(netPrice(p))} net</li>`).join('') || '<li>No matching items fit the budget.</li>'}</ol>
+      <ol class="compare-items">${r.items.map(p => `<li>${p.name} — ${money(netPrice(p))} net</li>`).join('') || '<li>No matching items fit the budget.</li>'}</ol>
     </article>`).join('');
 }
 function renderCart() {
@@ -769,7 +792,7 @@ function restoreKrogerStore(){
   if(s&&status) status.textContent=`Using ${s.name} · ${s.address||''}`;
 }
 async function findKrogerStores(){
-  const zip=(el('krogerZip')?.value||'').replace(/\D/g,'').slice(0,5);
+  const zip=(el('krogerZip')?.value||'').replace(/\D/g,'');
   const status=el('krogerStoreStatus'), select=el('krogerStoreSelect');
   if(zip.length!==5){ if(status) status.textContent='Enter a 5-digit ZIP code.'; return; }
   status.textContent='Finding nearby Kroger stores…';
@@ -822,7 +845,7 @@ if(el('krogerStoreSelect')) el('krogerStoreSelect').addEventListener('change',ch
 const SHARED_ZIP_KEY='couponGamePlan.sharedZip.v1';
 
 function getSharedZip(){
-  return (localStorage.getItem(SHARED_ZIP_KEY)||'').replace(/\D/g,'').slice(0,5);
+  return (localStorage.getItem(SHARED_ZIP_KEY)||'').replace(/\D/g,'');
 }
 function setSharedZip(zip){
   localStorage.setItem(SHARED_ZIP_KEY,zip);
@@ -852,7 +875,7 @@ async function resolveNearestKroger(zip){
 }
 async function applySharedZip(){
   const input=el('sharedZip'), status=el('sharedLocationStatus'), box=el('nearestStores');
-  const zip=(input?.value||'').replace(/\D/g,'').slice(0,5);
+  const zip=(input?.value||'').replace(/\D/g,'');
   if(zip.length!==5){ if(status) status.textContent='Enter a 5-digit ZIP code.'; return; }
   setSharedZip(zip);
   status.textContent=`Using ${zip} for Dollar General, Walmart, and Kroger. Finding nearest stores…`;

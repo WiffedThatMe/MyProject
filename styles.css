@@ -433,3 +433,9 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
   .store-cart-header{flex-direction:column}
   .store-cart-totals{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+.store-result-list{margin:.7rem 0 0;padding-left:1.45rem}
+.store-result-list li{margin:.45rem 0}
+.store-result-list-wrap:not(.expanded) .store-result-list li:nth-child(n+6){display:none}
+.store-list-toggle{margin-top:.65rem}
+.store-comparison-card,.comparison-card{overflow:visible}
