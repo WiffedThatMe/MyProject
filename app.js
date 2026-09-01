@@ -147,6 +147,186 @@ function promotionTiming(p){
   if(!p.couponEnd) return ''; const d=daysUntil(p.couponEnd);
   if(d===null) return ''; if(d<0) return `Expired ${shortDate(p.couponEnd)}`; if(d===0) return 'Expires today'; if(d===1) return 'Expires tomorrow'; return `Expires ${shortDate(p.couponEnd)} · ${d} days left`;
 }
+
+const COUPON_PLAN_KEY='couponGamePlan.couponPlan.v1';
+
+function couponId(p){
+  return [
+    p.store||'',
+    p.title||'',
+    p.amount||0,
+    p.minimumSpend||0,
+    p.quantity||0,
+    p.couponEnd||''
+  ].join('::').toLowerCase();
+}
+function loadCouponPlan(){
+  try{return JSON.parse(localStorage.getItem(COUPON_PLAN_KEY)||'{}')||{}}
+  catch{return {}}
+}
+function saveCouponPlan(plan){
+  localStorage.setItem(COUPON_PLAN_KEY,JSON.stringify(plan));
+}
+function isCouponSelected(p){
+  return !!loadCouponPlan()[couponId(p)];
+}
+function selectCoupon(p){
+  const plan=loadCouponPlan(), id=couponId(p);
+  if(plan[id]) delete plan[id];
+  else {
+    plan[id]={
+      id,
+      store:p.store,
+      title:p.title,
+      amount:Number(p.amount||0),
+      minimumSpend:p.minimumSpend??null,
+      quantity:p.quantity??null,
+      limit:p.limit??null,
+      couponEnd:p.couponEnd||null,
+      couponKind:p.couponKind||p.type||'Offer',
+      description:p.description||'',
+      sourceUrl:p.sourceUrl||null,
+      selectedAt:Date.now(),
+      used:false,
+      worked:null,
+      expectedSavings:Number(p.amount||0),
+      actualSavings:null,
+      checkoutNotes:'',
+      verifiedAt:null
+    };
+  }
+  saveCouponPlan(plan);
+  renderPromotions();
+  renderCouponPlan();
+}
+function updateCouponUse(id,patch){
+  const plan=loadCouponPlan();
+  if(!plan[id]) return;
+  plan[id]={...plan[id],...patch};
+  if(patch.used===true || patch.worked!==undefined || patch.actualSavings!==undefined) {
+    plan[id].verifiedAt=Date.now();
+  }
+  saveCouponPlan(plan);
+  renderCouponPlan();
+  renderPromotions();
+}
+function couponResultLabel(c){
+  if(!c.used) return 'Not used yet';
+  if(c.worked==='yes') return 'Worked';
+  if(c.worked==='partial') return 'Partially worked';
+  if(c.worked==='no') return 'Did not work';
+  return 'Used — result not entered';
+}
+function renderCouponPlan(){
+  const box=el('selectedCoupons');
+  if(!box) return;
+  const plan=loadCouponPlan();
+  const rows=Object.values(plan).sort((a,b)=>(b.selectedAt||0)-(a.selectedAt||0));
+  const selectedCount=rows.length;
+  const expected=rows.reduce((s,c)=>s+Number(c.expectedSavings||0),0);
+  const verified=rows.filter(c=>c.used).length;
+  const actual=rows.reduce((s,c)=>s+(c.used && Number.isFinite(Number(c.actualSavings))?Number(c.actualSavings):0),0);
+
+  if(el('selectedCouponCount')) el('selectedCouponCount').textContent=String(selectedCount);
+  if(el('expectedCouponSavings')) el('expectedCouponSavings').textContent=money(expected);
+  if(el('verifiedCouponCount')) el('verifiedCouponCount').textContent=String(verified);
+  if(el('actualCouponSavings')) el('actualCouponSavings').textContent=money(actual);
+
+  const results=el('couponPlanResults');
+  if(results){
+    const worked=rows.filter(c=>c.used&&c.worked==='yes').length;
+    const partial=rows.filter(c=>c.used&&c.worked==='partial').length;
+    const failed=rows.filter(c=>c.used&&c.worked==='no').length;
+    const pending=rows.filter(c=>!c.used).length;
+    results.innerHTML=selectedCount
+      ? `<span><strong>${worked}</strong> worked</span><span><strong>${partial}</strong> partial</span><span><strong>${failed}</strong> failed</span><span><strong>${pending}</strong> still planned</span>`
+      : '';
+  }
+
+  if(!rows.length){
+    box.innerHTML='<div class="empty-state">Select coupons from Live Coupons & Promotions to build your plan.</div>';
+    return;
+  }
+
+  box.innerHTML=rows.map(c=>{
+    const actualValue=(c.actualSavings===null||c.actualSavings===undefined)?'':Number(c.actualSavings).toFixed(2);
+    const verifiedText=c.verifiedAt?`Last updated ${new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(c.verifiedAt))}`:'';
+    return `<article class="selected-coupon-card">
+      <div class="selected-coupon-head">
+        <div>
+          <div class="coupon-labels">
+            <span class="store-badge">${esc(storeNames[c.store]||c.store)}</span>
+            <span class="badge coupon">${esc(c.couponKind)}</span>
+            <span class="result-badge ${c.worked||(!c.used?'pending':'used')}">${esc(couponResultLabel(c))}</span>
+          </div>
+          <h3>${esc(c.title)}</h3>
+          <p class="coupon-summary">${esc(c.description||'')}</p>
+        </div>
+        <button class="secondary remove-coupon" type="button" data-remove-coupon="${esc(c.id)}">Remove</button>
+      </div>
+
+      <div class="coupon-facts">
+        ${couponFact('Expected savings',money(c.expectedSavings||0))}
+        ${couponFact('Minimum spend',c.minimumSpend?money(c.minimumSpend):null)}
+        ${couponFact('Buy',c.quantity||null)}
+        ${couponFact('Expires',c.couponEnd?shortDate(c.couponEnd):null)}
+      </div>
+
+      <div class="coupon-verification-form">
+        <label class="form-check">
+          <input type="checkbox" data-used-coupon="${esc(c.id)}" ${c.used?'checked':''}>
+          <span>I used this coupon</span>
+        </label>
+
+        <label>
+          Did it work?
+          <select data-worked-coupon="${esc(c.id)}" ${c.used?'':'disabled'}>
+            <option value="" ${!c.worked?'selected':''}>Choose result</option>
+            <option value="yes" ${c.worked==='yes'?'selected':''}>Yes — worked as intended</option>
+            <option value="partial" ${c.worked==='partial'?'selected':''}>Partially</option>
+            <option value="no" ${c.worked==='no'?'selected':''}>No — did not work</option>
+          </select>
+        </label>
+
+        <label>
+          Actual savings
+          <div class="money-input">
+            <span>$</span>
+            <input type="number" min="0" step="0.01" inputmode="decimal"
+              data-actual-coupon="${esc(c.id)}"
+              value="${esc(actualValue)}"
+              placeholder="${Number(c.expectedSavings||0).toFixed(2)}"
+              ${c.used?'':'disabled'}>
+          </div>
+        </label>
+
+        <label class="coupon-notes-label">
+          What happened?
+          <textarea rows="2" data-notes-coupon="${esc(c.id)}" placeholder="Example: coupon scanned fine, item size was wrong, cashier override, only $2 came off..." ${c.used?'':'disabled'}>${esc(c.checkoutNotes||'')}</textarea>
+        </label>
+      </div>
+      ${verifiedText?`<div class="verified-note">${esc(verifiedText)}</div>`:''}
+    </article>`;
+  }).join('');
+
+  box.querySelectorAll('[data-remove-coupon]').forEach(btn=>btn.addEventListener('click',()=>{
+    const plan=loadCouponPlan(); delete plan[btn.dataset.removeCoupon]; saveCouponPlan(plan); renderCouponPlan(); renderPromotions();
+  }));
+  box.querySelectorAll('[data-used-coupon]').forEach(input=>input.addEventListener('change',()=>{
+    updateCouponUse(input.dataset.usedCoupon,{used:input.checked, worked:input.checked?loadCouponPlan()[input.dataset.usedCoupon]?.worked:null});
+  }));
+  box.querySelectorAll('[data-worked-coupon]').forEach(select=>select.addEventListener('change',()=>{
+    updateCouponUse(select.dataset.workedCoupon,{worked:select.value||null});
+  }));
+  box.querySelectorAll('[data-actual-coupon]').forEach(input=>input.addEventListener('change',()=>{
+    const v=input.value===''?null:Math.max(0,Number(input.value)||0);
+    updateCouponUse(input.dataset.actualCoupon,{actualSavings:v});
+  }));
+  box.querySelectorAll('[data-notes-coupon]').forEach(input=>input.addEventListener('change',()=>{
+    updateCouponUse(input.dataset.notesCoupon,{checkoutNotes:input.value.slice(0,500)});
+  }));
+}
+
 function renderPromotions(){
   const box=el('promotions'); if(!box) return; const filter=el('promotionStore')?.value||'All';
   const rows=promotions.filter(p=>(filter==='All'||p.store===filter)&&(!p.couponEnd||daysUntil(p.couponEnd)>=0)).sort((a,b)=>{ const ad=daysUntil(a.couponEnd), bd=daysUntil(b.couponEnd); return (ad??9999)-(bd??9999); });
@@ -180,6 +360,11 @@ function renderPromotions(){
           ${couponFact('Expires',p.couponEnd?shortDate(p.couponEnd):null)}
         </div>
         ${timing?`<span class="badge expiry ${daysUntil(p.couponEnd)<=2?'urgent':''}">${esc(timing)}</span>`:''}
+        <div class="coupon-card-actions">
+          <button type="button" class="${isCouponSelected(p)?'selected-coupon-button':'select-coupon-button'}" data-select-coupon="${esc(couponId(p))}">
+            ${isCouponSelected(p)?'✓ Selected':'Select Coupon'}
+          </button>
+        </div>
         <details class="coupon-details">
           <summary>View coupon details</summary>
           <div class="coupon-detail-body">
@@ -190,6 +375,10 @@ function renderPromotions(){
       </div>
     </article>`;
   }).join('');
+  box.querySelectorAll('[data-select-coupon]').forEach(btn=>btn.addEventListener('click',()=>{
+    const p=rows.find(x=>couponId(x)===btn.dataset.selectCoupon);
+    if(p) selectCoupon(p);
+  }));
 }
 
 function selectedNeeds() {
@@ -372,6 +561,8 @@ async function refreshDealFeed({silent=false}={}) {
     sourceCoverage = payload.sources || null;
     recordPriceHistory(products,'live-refresh');
     renderPromotions(); renderSourceCoverage();
+renderCouponPlan();
+if(el('clearCouponPlan')) el('clearCouponPlan').addEventListener('click',()=>{ if(confirm('Clear all selected coupons and checkout results?')){ localStorage.removeItem(COUPON_PLAN_KEY); renderCouponPlan(); renderPromotions(); } });
     lastRefreshAt = new Date(payload.updatedAt || Date.now());
     const liveCount = (payload.products?.length||0) + (payload.promotions?.length||0);
     setFreshness(payload.live ? 'fresh' : 'limited', payload.live ? `Live sources checked · ${liveCount} records` : 'Live sources limited');
@@ -392,6 +583,8 @@ function startDealRefresh() {
 
 if (el('refreshDeals')) el('refreshDeals').addEventListener('click', () => refreshDealFeed());
 renderPromotions(); renderSourceCoverage();
+renderCouponPlan();
+if(el('clearCouponPlan')) el('clearCouponPlan').addEventListener('click',()=>{ if(confirm('Clear all selected coupons and checkout results?')){ localStorage.removeItem(COUPON_PLAN_KEY); renderCouponPlan(); renderPromotions(); } });
 if (el('promotionStore')) el('promotionStore').addEventListener('change', renderPromotions);
 setFreshness('checking','Checking live retailer sources…');
 refreshDealFeed({silent:true});

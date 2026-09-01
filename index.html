@@ -215,6 +215,29 @@
       <div id="promotions" class="promotion-grid"><div class="empty-state">Refresh deals to load current promotions.</div></div>
     </section>
 
+    <section class="panel coupon-plan-panel">
+      <div class="section-head">
+        <div>
+          <h2>My Coupon Plan</h2>
+          <p>Select coupons you want to use, then record what actually happened at checkout.</p>
+        </div>
+        <button id="clearCouponPlan" class="secondary" type="button">Clear Plan</button>
+      </div>
+
+      <div class="coupon-plan-summary">
+        <article class="stat"><span>Selected</span><strong id="selectedCouponCount">0</strong></article>
+        <article class="stat"><span>Expected savings</span><strong id="expectedCouponSavings">$0.00</strong></article>
+        <article class="stat"><span>Verified used</span><strong id="verifiedCouponCount">0</strong></article>
+        <article class="stat featured"><span>Actual savings</span><strong id="actualCouponSavings">$0.00</strong></article>
+      </div>
+
+      <div id="couponPlanResults" class="coupon-plan-results"></div>
+      <div id="selectedCoupons" class="selected-coupons">
+        <div class="empty-state">Select coupons from Live Coupons & Promotions to build your plan.</div>
+      </div>
+    </section>
+
+
     <section class="panel history-panel">
       <div class="section-head">
         <div>
