@@ -57,8 +57,8 @@
     <section class="panel builder">
       <div class="section-head">
         <div>
-          <h2>Build My Best Deal</h2>
-          <p>Tell it your budget. It ranks the cart by true net value.</p>
+          <h2>Build My Household Plan</h2>
+          <p>Choose how long the groceries need to last, your household, and your budget. Coupons and sales work underneath the plan.</p>
         </div>
       </div>
 
@@ -77,7 +77,7 @@
           Budget
           <div class="money-input">
             <span>$</span>
-            <input id="budget" type="number" min="1" max="500" step="1" value="25" />
+            <input id="budget" type="number" min="1" max="5000" step="1" value="400" />
           </div>
         </label>
 
@@ -113,14 +113,45 @@
         </div>
       </div>
 
-      <div class="quick-budgets">
-        <button type="button" data-budget="15">$15</button>
-        <button type="button" data-budget="25">$25</button>
-        <button type="button" data-budget="40">$40</button>
-        <button type="button" data-budget="50">$50</button>
+      <div class="planner-block">
+        <h3>How long should it last?</h3>
+        <div class="plan-choice-row" id="durationChoices">
+          <button type="button" data-duration="1">1 Week</button>
+          <button type="button" data-duration="2" class="selected">2 Weeks</button>
+          <button type="button" data-duration="3">3 Weeks</button>
+          <button type="button" data-duration="4">1 Month</button>
+        </div>
+      </div>
+      <div class="planner-block household-row">
+        <label>Adults <input id="adults" type="number" min="1" max="12" value="2"></label>
+        <label>Kids <input id="kids" type="number" min="0" max="12" value="2"></label>
+      </div>
+      <div class="planner-block">
+        <h3>Budget</h3>
+        <div class="quick-budgets">
+          <button type="button" data-budget="200">$200</button>
+          <button type="button" data-budget="400" class="selected">$400</button>
+          <button type="button" data-budget="600">$600</button>
+          <button type="button" data-budget="800">$800</button>
+        </div>
+      </div>
+      <div class="planner-block">
+        <h3>What does the house need?</h3>
+        <div class="needs-grid" id="houseNeeds">
+          <label><input type="checkbox" value="meals" checked> Meals</label>
+          <label><input type="checkbox" value="breakfast" checked> Breakfast</label>
+          <label><input type="checkbox" value="lunch" checked> Lunches</label>
+          <label><input type="checkbox" value="snacks" checked> Snacks</label>
+          <label><input type="checkbox" value="drinks" checked> Drinks</label>
+          <label><input type="checkbox" value="laundry"> Laundry</label>
+          <label><input type="checkbox" value="cleaning"> Cleaning</label>
+          <label><input type="checkbox" value="paper"> Paper Products</label>
+          <label><input type="checkbox" value="personal"> Personal Care</label>
+          <label><input type="checkbox" value="pet"> Pet</label>
+        </div>
       </div>
 
-      <button id="build" class="primary" type="button">Build My Best Cart</button>
+      <button id="build" class="primary" type="button">Build My Grocery Plan</button>
       <p class="small-note">Prices and offers can vary by store, location, account and date. Always confirm the final offer before purchase.</p>
     </section>
 
@@ -181,7 +212,7 @@
         <button id="clear" class="secondary" type="button">Clear Suggested Cart</button>
       </div>
 
-      <div id="summaryText" class="callout">Choose one store or Compare All Stores, set your budget, then build your cart.</div>
+      <div id="summaryText" class="callout">Choose how long the plan needs to last, your household size, budget, and needs. The app will use the best store-specific deals it can verify.</div>
       <div id="rewardSummary" class="reward-summary"></div>
       <div id="cart" class="cart-list empty"><div class="empty-state">Your recommended items will appear here.</div></div>
     </section>
@@ -261,7 +292,79 @@
       </div>
     </section>
   
-    <section class="panel store-picker-panel">
+    
+<section class="panel game-panel" id="gamePlanner">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow">HOUSEHOLD QUEST</span>
+      <h2>Build Your Game Plan</h2>
+      <p>Set up your household once. The planner uses your real preferences, meals, pantry and budget to hunt for useful deals.</p>
+    </div>
+    <div class="quest-score"><strong id="questPct">0%</strong><span>Setup</span></div>
+  </div>
+  <div class="quest-progress"><i id="questBar"></i></div>
+  <div class="quest-steps">
+    <button type="button" class="quest-step active" data-quest="1"><b>1</b><span>Household</span></button>
+    <button type="button" class="quest-step" data-quest="2"><b>2</b><span>Foods</span></button>
+    <button type="button" class="quest-step" data-quest="3"><b>3</b><span>Meals</span></button>
+    <button type="button" class="quest-step" data-quest="4"><b>4</b><span>Pantry</span></button>
+    <button type="button" class="quest-step" data-quest="5"><b>5</b><span>Rules</span></button>
+  </div>
+  <div class="quest-screen active" data-screen="1">
+    <h3>Who are we shopping for?</h3>
+    <p>This controls realistic quantities instead of filling the cart with whatever has the biggest coupon.</p>
+    <div class="game-fields"><label>Adults<input id="gameAdults" type="number" min="1" value="2"></label><label>Kids<input id="gameKids" type="number" min="0" value="2"></label></div>
+  </div>
+  <div class="quest-screen" data-screen="2">
+    <h3>What gets eaten at your house?</h3>
+    <p>Tap the stuff you actually buy. Tap again later to change it.</p>
+    <div class="tap-grid" id="foodPicks">
+      <button data-pick="chicken">🍗 Chicken</button><button data-pick="ground beef">🥩 Ground Beef</button><button data-pick="eggs">🥚 Eggs</button>
+      <button data-pick="milk">🥛 Milk</button><button data-pick="bread">🍞 Bread</button><button data-pick="cheese">🧀 Cheese</button>
+      <button data-pick="pasta">🍝 Pasta</button><button data-pick="tortillas">🌮 Tortillas</button><button data-pick="snacks">🍿 Snacks</button>
+      <button data-pick="pizza">🍕 Pizza</button><button data-pick="cereal">🥣 Cereal</button><button data-pick="vegetables">🥦 Vegetables</button>
+    </div>
+    <div class="add-own"><input id="customFood" placeholder="Add something your house buys"><button type="button" id="addCustomFood">Add</button></div>
+  </div>
+  <div class="quest-screen" data-screen="3">
+    <h3>Easy meals your house likes</h3>
+    <div class="tap-grid" id="mealPicks">
+      <button data-meal="Spaghetti">🍝 Spaghetti</button><button data-meal="Tacos">🌮 Tacos</button><button data-meal="Pizza">🍕 Pizza</button>
+      <button data-meal="Chicken & Dumplings">🥘 Chicken & Dumplings</button><button data-meal="Lasagna">🍲 Lasagna</button>
+      <button data-meal="Breakfast for Dinner">🍳 Breakfast for Dinner</button><button data-meal="Burgers">🍔 Burgers</button><button data-meal="Quesadillas">🧀 Quesadillas</button>
+    </div>
+    <div class="add-own"><input id="customMeal" placeholder="Add your own meal"><button type="button" id="addCustomMeal">Add</button></div>
+  </div>
+  <div class="quest-screen" data-screen="4">
+    <h3>What's usually in the pantry?</h3>
+    <p>These won't eat up the grocery budget unless you mark them low later.</p>
+    <div class="tap-grid" id="pantryPicks">
+      <button data-pantry="flour">Flour</button><button data-pantry="sugar">Sugar</button><button data-pantry="butter">Butter</button>
+      <button data-pantry="eggs">Eggs</button><button data-pantry="milk">Milk</button><button data-pantry="rice">Rice</button>
+      <button data-pantry="oil">Cooking Oil</button><button data-pantry="seasonings">Seasonings</button><button data-pantry="cheese">Cheese</button>
+    </div>
+  </div>
+  <div class="quest-screen" data-screen="5">
+    <h3>Your non-negotiables</h3>
+    <p>Tell the planner what it should never cheap out on.</p>
+    <div id="preferenceRules" class="preference-rules"></div>
+    <div class="rule-builder"><input id="ruleItem" placeholder="Example: Mac & Cheese"><input id="ruleBrand" placeholder="Example: Kraft"><select id="ruleType"><option value="only">Only buy this</option><option value="prefer">Prefer this</option><option value="avoid">Avoid this</option><option value="never">Never buy</option></select><button type="button" id="addRule">Save Rule</button></div>
+  </div>
+  <div class="quest-actions"><button type="button" class="secondary" id="questBack">Back</button><button type="button" id="questNext">Next Quest</button></div>
+</section>
+
+<section class="panel meal-maker-panel">
+  <div class="section-head"><div><span class="eyebrow">MEAL MAKER</span><h2>What Can I Make?</h2><p>Type ingredients you already have and get easy meal ideas plus what you're missing.</p></div></div>
+  <div class="meal-maker-input"><input id="mealIngredients" placeholder="chicken, flour, eggs, milk, cheese..."><button type="button" id="makeMeals">Find Meals</button></div>
+  <div id="mealIdeas" class="meal-ideas"></div>
+</section>
+
+<section class="panel frequent-panel">
+ <div class="section-head"><div><span class="eyebrow">YOUR HOUSE</span><h2>Frequently Bought & Deal Watch</h2><p>Your normal items become more useful than random coupons. Good prices rise to the top.</p></div></div>
+ <div id="frequentItems" class="frequent-items"><p class="muted">Finish your Household Quest and your usual foods will show here.</p></div>
+</section>
+
+<section class="panel store-picker-panel">
       <div class="section-head">
         <div>
           <h2>Shopping Stores</h2>

@@ -1024,3 +1024,105 @@ async function useCurrentLocation(){
 if(el('useCurrentLocation')) el('useCurrentLocation').addEventListener('click',useCurrentLocation);
 
 initRetailStorePicker();
+
+const HOUSE_PLAN_KEY='couponGamePlan.housePlan.v1';
+function loadHousePlan(){
+  try{return JSON.parse(localStorage.getItem(HOUSE_PLAN_KEY)||'{}')||{}}catch{return{}}
+}
+function saveHousePlan(){
+  const duration=Number(document.querySelector('[data-duration].selected')?.dataset.duration||2);
+  const needs=[...document.querySelectorAll('#houseNeeds input:checked')].map(x=>x.value);
+  const plan={duration,adults:Number(el('adults')?.value||2),kids:Number(el('kids')?.value||0),budget:Number(el('budget')?.value||400),needs};
+  localStorage.setItem(HOUSE_PLAN_KEY,JSON.stringify(plan));
+  return plan;
+}
+function initHousePlanner(){
+  const saved=loadHousePlan();
+  if(saved.budget && el('budget')) el('budget').value=saved.budget;
+  if(saved.adults && el('adults')) el('adults').value=saved.adults;
+  if(saved.kids!==undefined && el('kids')) el('kids').value=saved.kids;
+  document.querySelectorAll('[data-duration]').forEach(b=>{
+    if(Number(b.dataset.duration)===(saved.duration||2)) b.classList.add('selected'); else b.classList.remove('selected');
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('[data-duration]').forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected'); saveHousePlan();
+    });
+  });
+  if(Array.isArray(saved.needs)){
+    document.querySelectorAll('#houseNeeds input').forEach(x=>x.checked=saved.needs.includes(x.value));
+  }
+  document.querySelectorAll('#houseNeeds input,#adults,#kids,#budget').forEach(x=>x.addEventListener('change',saveHousePlan));
+  document.querySelectorAll('[data-budget]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-budget]').forEach(x=>x.classList.remove('selected')); b.classList.add('selected'); saveHousePlan();
+  }));
+}
+
+initHousePlanner();
+
+
+const GAME_PROFILE_KEY='couponGamePlan.gameProfile.v1';
+const MEAL_DB=[
+ {name:'Spaghetti',need:['pasta','pasta sauce'],optional:['ground beef','cheese']},
+ {name:'Tacos',need:['tortillas','ground beef','cheese'],optional:['lettuce','salsa','taco seasoning']},
+ {name:'Chicken & Dumplings',need:['chicken','flour','milk','butter'],optional:['broth','seasonings']},
+ {name:'Pizza',need:['pizza'],optional:['cheese']},
+ {name:'Lasagna',need:['pasta','pasta sauce','cheese','ground beef'],optional:['ricotta']},
+ {name:'Breakfast for Dinner',need:['eggs','milk'],optional:['bread','bacon','sausage']},
+ {name:'Quesadillas',need:['tortillas','cheese'],optional:['chicken']},
+ {name:'Burgers',need:['ground beef','bread'],optional:['cheese','ketchup']}
+];
+let questStep=1;
+function gameProfile(){try{return JSON.parse(localStorage.getItem(GAME_PROFILE_KEY)||'{}')||{}}catch{return{}}}
+function putGameProfile(p){localStorage.setItem(GAME_PROFILE_KEY,JSON.stringify(p));renderFrequent();updateQuestProgress()}
+function selectedData(attr){return [...document.querySelectorAll(`[${attr}].picked`)].map(x=>x.getAttribute(attr))}
+function saveGameProfile(){
+ const p=gameProfile(); p.adults=Number(el('gameAdults')?.value||2);p.kids=Number(el('gameKids')?.value||0);
+ p.foods=selectedData('data-pick');p.meals=selectedData('data-meal');p.pantry=selectedData('data-pantry');
+ putGameProfile(p);return p;
+}
+function showQuest(n){
+ questStep=Math.max(1,Math.min(5,n));
+ document.querySelectorAll('.quest-screen').forEach(x=>x.classList.toggle('active',Number(x.dataset.screen)===questStep));
+ document.querySelectorAll('.quest-step').forEach(x=>x.classList.toggle('active',Number(x.dataset.quest)===questStep));
+ if(el('questBack')) el('questBack').disabled=questStep===1;
+ if(el('questNext')) el('questNext').textContent=questStep===5?'Finish Setup':'Next Quest';
+ updateQuestProgress();
+}
+function updateQuestProgress(){
+ const p=gameProfile(); let score=0;
+ if((p.adults||0)+(p.kids||0)>0)score++;
+ if(p.foods?.length)score++; if(p.meals?.length)score++; if(p.pantry?.length)score++; if(p.rules?.length)score++;
+ const pct=score*20;if(el('questPct'))el('questPct').textContent=pct+'%';if(el('questBar'))el('questBar').style.width=pct+'%';
+}
+function addGameRule(){
+ const item=el('ruleItem')?.value.trim(),brand=el('ruleBrand')?.value.trim(),type=el('ruleType')?.value;
+ if(!item)return;const p=gameProfile();p.rules=p.rules||[];p.rules.push({item,brand,type});putGameProfile(p);el('ruleItem').value='';el('ruleBrand').value='';renderRules();
+}
+function renderRules(){
+ const p=gameProfile(),box=el('preferenceRules');if(!box)return;
+ box.innerHTML=(p.rules||[]).map((r,i)=>`<div class="pref-rule"><div><strong>${esc(r.item)}</strong><span>${r.type==='only'?'Only buy':r.type==='prefer'?'Prefer':r.type==='avoid'?'Avoid':'Never buy'}${r.brand?' · '+esc(r.brand):''}</span></div><button type="button" data-del-rule="${i}">×</button></div>`).join('')||'<p class="muted">No hard rules yet. Add the brands or foods that matter to you.</p>';
+ box.querySelectorAll('[data-del-rule]').forEach(b=>b.onclick=()=>{const p=gameProfile();p.rules.splice(Number(b.dataset.delRule),1);putGameProfile(p);renderRules()});
+}
+function renderFrequent(){
+ const p=gameProfile(),box=el('frequentItems');if(!box)return;const foods=p.foods||[];
+ box.innerHTML=foods.length?foods.map((x,i)=>`<div class="frequent-item"><strong>${esc(x)}</strong><span>${i%3===0?'Deal watch on':i%3===1?'Frequently bought':'Watch for coupon'}</span></div>`).join(''):'<p class="muted">Finish your Household Quest and your usual foods will show here.</p>';
+}
+function runMealMaker(){
+ const have=(el('mealIngredients')?.value||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
+ const ranked=MEAL_DB.map(m=>{const missing=m.need.filter(x=>!have.some(h=>x.includes(h)||h.includes(x)));return {...m,missing,score:m.need.length-missing.length}}).sort((a,b)=>b.score-a.score||a.missing.length-b.missing.length);
+ const box=el('mealIdeas');box.innerHTML=ranked.slice(0,5).map(m=>`<article class="meal-idea"><div><strong>${esc(m.name)}</strong><span>${m.missing.length===0?'Ready to make':'Need '+m.missing.length+' more item'+(m.missing.length===1?'':'s')}</span></div>${m.missing.length?`<p>Missing: ${m.missing.map(esc).join(', ')}</p>`:'<p>You have the main ingredients.</p>'}</article>`).join('');
+}
+function initGamePlanner(){
+ const p=gameProfile();if(el('gameAdults'))el('gameAdults').value=p.adults||2;if(el('gameKids'))el('gameKids').value=p.kids??2;
+ [['data-pick',p.foods],['data-meal',p.meals],['data-pantry',p.pantry]].forEach(([a,vals])=>document.querySelectorAll(`[${a}]`).forEach(b=>{if(vals?.includes(b.getAttribute(a)))b.classList.add('picked');b.onclick=()=>{b.classList.toggle('picked');saveGameProfile()}}));
+ document.querySelectorAll('.quest-step').forEach(b=>b.onclick=()=>showQuest(Number(b.dataset.quest)));
+ if(el('questBack'))el('questBack').onclick=()=>{saveGameProfile();showQuest(questStep-1)};
+ if(el('questNext'))el('questNext').onclick=()=>{saveGameProfile();if(questStep<5)showQuest(questStep+1);else{el('questNext').textContent='Setup Saved ✓'}};
+ ['gameAdults','gameKids'].forEach(id=>{if(el(id))el(id).onchange=saveGameProfile});
+ if(el('addRule'))el('addRule').onclick=addGameRule;if(el('makeMeals'))el('makeMeals').onclick=runMealMaker;
+ function addCustom(inputId,containerId,attr){const v=el(inputId)?.value.trim();if(!v)return;const b=document.createElement('button');b.type='button';b.setAttribute(attr,v);b.textContent=v;b.classList.add('picked');b.onclick=()=>{b.classList.toggle('picked');saveGameProfile()};el(containerId).appendChild(b);el(inputId).value='';saveGameProfile()}
+ if(el('addCustomFood'))el('addCustomFood').onclick=()=>addCustom('customFood','foodPicks','data-pick');
+ if(el('addCustomMeal'))el('addCustomMeal').onclick=()=>addCustom('customMeal','mealPicks','data-meal');
+ renderRules();renderFrequent();showQuest(1);
+}
+initGamePlanner();
