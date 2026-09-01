@@ -38,6 +38,94 @@ const HISTORY_KEY = 'couponGamePlan.priceHistory.v1';
 const HISTORY_MAX_PER_ITEM = 180;
 const productKey = p => `${p.store}::${(p.upc || p.name || '').toLowerCase().trim()}`;
 
+const MANUAL_CART_KEY = 'couponGamePlan.manualCart.v1';
+
+function brandType(p){
+  const n=(p.name||'').toLowerCase();
+  if (/\bgreat value\b|\bkroger\b|\bclover valley\b|\bstudio selection\b|\bequate\b|\bmarketside\b|\bprivate selection\b|\bsimple truth\b/.test(n)) return 'store';
+  return 'name';
+}
+function productFamily(p){
+  const n=(p.name||'').toLowerCase();
+  const families=[
+    ['toaster pastries',/pop.?tarts?|toaster pastry|toaster pastries/],
+    ['laundry detergent',/laundry|detergent|tide|gain/],
+    ['paper towels',/paper towel/],
+    ['toilet paper',/toilet paper|bath tissue/],
+    ['bread',/\bbread\b/],
+    ['eggs',/\begg/],
+    ['water',/\bwater\b/],
+    ['cereal',/\bcereal\b|cap.?n crunch|cheerios|life\b/],
+    ['pasta',/\bpasta\b|spaghetti|penne|macaroni/],
+    ['milk',/\bmilk\b/],
+    ['soft drinks',/soda|soft drink|mtn dew|mountain dew|pepsi|coke|cola/],
+    ['dish soap',/dish soap|dishwashing|dawn/],
+    ['deodorant',/deodorant|degree/]
+  ];
+  for(const [name,re] of families) if(re.test(n)) return name;
+  return (p.cat||'other').toLowerCase();
+}
+function manualCartKeys(){
+  try{return JSON.parse(localStorage.getItem(MANUAL_CART_KEY)||'[]')||[]}catch{return[]}
+}
+function saveManualCartKeys(keys){ localStorage.setItem(MANUAL_CART_KEY,JSON.stringify(keys)); }
+function cartKey(p){ return productKey(p); }
+function isInManualCart(p){ return manualCartKeys().includes(cartKey(p)); }
+function addDealToCart(p){
+  const keys=manualCartKeys();
+  const key=cartKey(p);
+  if(!keys.includes(key)) keys.push(key);
+  saveManualCartKeys(keys);
+  syncManualCart();
+}
+function removeDealFromCart(key){
+  saveManualCartKeys(manualCartKeys().filter(x=>x!==key));
+  syncManualCart();
+}
+function syncManualCart(){
+  const keys=manualCartKeys();
+  cart=keys.map(k=>products.find(p=>cartKey(p)===k)).filter(Boolean);
+  comparisonResults=[];
+  renderCart();
+  renderDeals();
+}
+function alternativesFor(p){
+  const fam=productFamily(p);
+  return products
+    .filter(x=>cartKey(x)!==cartKey(p) && productFamily(x)===fam)
+    .map(x=>({...x,_net:netPrice(x),_brand:brandType(x)}))
+    .sort((a,b)=>a._net-b._net)
+    .slice(0,5);
+}
+function comparisonMessage(p){
+  const alts=alternativesFor(p);
+  if(!alts.length) return '';
+  const best=alts[0];
+  const diff=Math.abs(netPrice(p)-netPrice(best));
+  if(best._net < netPrice(p)-0.009){
+    const brandLabel=best._brand==='store'?'store-brand':'name-brand';
+    return `${storeNames[best.store]} ${best.name} is ${money(diff)} cheaper after sales/coupons/rewards (${brandLabel}).`;
+  }
+  return `${p.name} is the lowest net price among the matching items currently loaded.`;
+}
+function renderAlternativeRows(p){
+  const rows=[{...p,_net:netPrice(p),_brand:brandType(p),_selected:true},...alternativesFor(p)]
+    .sort((a,b)=>a._net-b._net);
+  if(rows.length<2) return '';
+  return `<details class="price-compare"><summary>Compare name brand vs store brand</summary>
+    <div class="compare-table">
+      ${rows.map((x,i)=>`<div class="compare-row ${x._selected?'selected':''} ${i===0?'best':''}">
+        <div><strong>${esc(x.name)}</strong><small>${esc(storeNames[x.store]||x.store)} · ${x._brand==='store'?'Store brand':'Name brand'}</small></div>
+        <div><small>Shelf</small><strong>${money(x.price)}</strong></div>
+        <div><small>Coupon</small><strong>${x.coupon?'-'+money(x.coupon):'—'}</strong></div>
+        <div><small>Checkout</small><strong>${money(checkoutPrice(x))}</strong></div>
+        <div><small>Net</small><strong>${money(netPrice(x))}</strong></div>
+        ${i===0?'<span class="cheapest-tag">Cheapest</span>':''}
+      </div>`).join('')}
+    </div>
+  </details>`;
+}
+
 function parseLocalDate(value) {
   if (!value) return null;
   const d = new Date(`${value}T23:59:59`);
@@ -477,16 +565,36 @@ function renderComparison() {
 function renderCart() {
   const cartEl = el('cart');
   cartEl.innerHTML = '';
-  if (!cart.length) { cartEl.innerHTML = '<div class="empty-state">No items fit your current filters and budget.</div>'; updateSummary(); return; }
+  if (!cart.length) {
+    cartEl.innerHTML = '<div class="empty-state">Your cart is empty. Use “Add to Cart” on any deal below.</div>';
+    updateSummary();
+    return;
+  }
   cart.forEach(p => {
     const row = document.createElement('div');
-    row.className = 'cart-item';
+    row.className = 'cart-item cart-item-rich';
     const saleLabel = p.store === 'Walmart' && p.rollback ? 'Rollback' : 'Sale';
-    row.innerHTML = `<div><span class="store-badge">${storeNames[p.store]}</span><h3>${p.name}</h3><div class="meta">Shelf ${money(p.price)} · ${saleLabel} ${money(p.sale)} · Checkout ${money(checkoutPrice(p))}</div><div class="badges">${badges(p)}</div></div><div class="price-block"><strong>${money(netPrice(p))}</strong><small>Net after cash back</small></div>`;
+    const compareNote=comparisonMessage(p);
+    row.innerHTML = `<div class="cart-item-main">
+      <div>
+        <span class="store-badge">${storeNames[p.store]}</span>
+        <span class="brand-badge ${brandType(p)}">${brandType(p)==='store'?'Store brand':'Name brand'}</span>
+        <h3>${esc(p.name)}</h3>
+        <div class="meta">Shelf ${money(p.price)} · ${saleLabel} ${money(p.sale)} · Checkout ${money(checkoutPrice(p))}</div>
+        <div class="badges">${badges(p)}</div>
+        ${compareNote?`<div class="compare-note">${esc(compareNote)}</div>`:''}
+      </div>
+      <div class="price-block"><strong>${money(netPrice(p))}</strong><small>Net after rewards</small>
+        <button class="secondary remove-cart-item" type="button" data-cart-remove="${esc(cartKey(p))}">Remove</button>
+      </div>
+    </div>
+    ${renderAlternativeRows(p)}`;
     cartEl.appendChild(row);
   });
+  cartEl.querySelectorAll('[data-cart-remove]').forEach(btn=>btn.addEventListener('click',()=>removeDealFromCart(btn.dataset.cartRemove)));
   updateSummary();
 }
+
 function updateSummary() {
   let summary;
   if (el('store').value === 'Compare' && comparisonResults.length) summary = comparisonResults[0];
@@ -510,8 +618,33 @@ function renderDeals() {
   const deals = getDealsEligible().filter(p => !query || (p.name+' '+p.cat+' '+storeNames[p.store]).toLowerCase().includes(query)).sort((a,b) => itemSavingsPct(b)-itemSavingsPct(a));
   el('deals').innerHTML = deals.map(p => {
     const hist = historyComparison(p);
-    return `<article class="deal-card"><span class="store-badge">${storeNames[p.store]}</span><h3>${p.name}</h3><div class="save">${money(netPrice(p))}</div><div class="meta">Checkout ${money(checkoutPrice(p))} · Net after rewards${hist ? ` · <strong>${hist}</strong>` : ''}</div><div class="badges">${badges(p)}</div><span class="pill">${Math.round(itemSavingsPct(p)*100)}% net savings</span></article>`;
+    const inCart=isInManualCart(p);
+    const brand=brandType(p);
+    const alts=alternativesFor(p);
+    const bestAlt=alts[0];
+    const cheaperAlt=bestAlt && netPrice(bestAlt)<netPrice(p)-0.009 ? bestAlt : null;
+    return `<article class="deal-card deal-card-selectable">
+      <div class="deal-card-top"><span class="store-badge">${storeNames[p.store]}</span><span class="brand-badge ${brand}">${brand==='store'?'Store brand':'Name brand'}</span></div>
+      <h3>${esc(p.name)}</h3>
+      <div class="save">${money(netPrice(p))}</div>
+      <div class="meta">Shelf ${money(p.price)} · Checkout ${money(checkoutPrice(p))} · Net after rewards${hist ? ` · <strong>${hist}</strong>` : ''}</div>
+      <div class="badges">${badges(p)}</div>
+      <span class="pill">${Math.round(itemSavingsPct(p)*100)}% net savings</span>
+      ${cheaperAlt?`<div class="cheaper-warning"><strong>Cheaper option found:</strong> ${esc(bestAlt.name)} at ${esc(storeNames[bestAlt.store])} is ${money(netPrice(p)-netPrice(bestAlt))} less after discounts.</div>`:''}
+      <div class="deal-actions">
+        <button type="button" class="${inCart?'selected-cart-button':'add-cart-button'}" data-add-deal="${esc(cartKey(p))}" ${inCart?'disabled':''}>${inCart?'✓ In Cart':'Add to Cart'}</button>
+        ${alts.length?`<button type="button" class="secondary compare-deal-button" data-compare-deal="${esc(cartKey(p))}">Compare Options</button>`:''}
+      </div>
+      <div class="inline-compare" id="compare-${encodeURIComponent(cartKey(p))}" hidden>${renderAlternativeRows(p)}</div>
+    </article>`;
   }).join('');
+  el('deals').querySelectorAll('[data-add-deal]').forEach(btn=>btn.addEventListener('click',()=>{
+    const p=products.find(x=>cartKey(x)===btn.dataset.addDeal); if(p) addDealToCart(p);
+  }));
+  el('deals').querySelectorAll('[data-compare-deal]').forEach(btn=>btn.addEventListener('click',()=>{
+    const card=btn.closest('.deal-card'); const panel=card?.querySelector('.inline-compare');
+    if(panel){panel.hidden=!panel.hidden; btn.textContent=panel.hidden?'Compare Options':'Hide Comparison';}
+  }));
 }
 
 document.querySelectorAll('[data-budget]').forEach(btn => btn.addEventListener('click', () => { el('budget').value=btn.dataset.budget; buildCart(); }));
@@ -521,7 +654,7 @@ el('anything').addEventListener('change', () => { if(el('anything').checked) doc
 el('store').addEventListener('change', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); renderDeals(); });
 el('goal').addEventListener('change', buildCart); el('build').addEventListener('click', buildCart); el('clear').addEventListener('click', () => { cart=[]; comparisonResults=[]; renderComparison(); renderCart(); }); el('search').addEventListener('input', renderDeals);
 recordPriceHistory(products,'bundled');
-renderDeals(); renderCart(); renderHistory();
+syncManualCart(); renderHistory();
 
 if (el('clearHistory')) el('clearHistory').addEventListener('click', () => {
   if (confirm('Clear all price history saved on this device?')) { localStorage.removeItem(HISTORY_KEY); renderHistory(); renderDeals(); }
@@ -566,7 +699,7 @@ if(el('clearCouponPlan')) el('clearCouponPlan').addEventListener('click',()=>{ i
     lastRefreshAt = new Date(payload.updatedAt || Date.now());
     const liveCount = (payload.products?.length||0) + (payload.promotions?.length||0);
     setFreshness(payload.live ? 'fresh' : 'limited', payload.live ? `Live sources checked · ${liveCount} records` : 'Live sources limited');
-    if (cart.length) buildCart(); else { renderDeals(); renderCart(); }
+    syncManualCart();
   } catch (err) {
     lastRefreshAt = new Date();
     setFreshness('limited','Live feed not connected yet');

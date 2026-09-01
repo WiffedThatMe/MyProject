@@ -387,3 +387,35 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
   .selected-coupon-head{flex-direction:column}
   .selected-coupon-head .remove-coupon{width:100%}
 }
+
+.deal-card-selectable{display:flex;flex-direction:column}
+.deal-card-top{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.brand-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:.72rem;font-weight:700;border:1px solid rgba(23,61,50,.12)}
+.brand-badge.store{background:#eef3ef;color:#234f40}
+.brand-badge.name{background:#f7f2e8;color:#6b5632}
+.deal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:14px}
+.add-cart-button,.selected-cart-button{border-radius:10px;min-height:42px;padding:9px 14px;font-weight:750;cursor:pointer}
+.add-cart-button{background:#173d32;color:white;border:1px solid #173d32}
+.selected-cart-button{background:#e9efe9;color:#173d32;border:1px solid rgba(23,61,50,.18)}
+.cheaper-warning{margin-top:10px;padding:9px 10px;border-radius:10px;background:#f8f2e5;color:#5f4a24;font-size:.84rem;line-height:1.35}
+.cart-item-rich{display:block}
+.cart-item-main{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.compare-note{margin-top:9px;font-size:.86rem;color:#3f554c;font-weight:600}
+.price-compare{margin-top:12px;border-top:1px solid rgba(23,61,50,.10);padding-top:10px}
+.price-compare summary{cursor:pointer;font-weight:700;color:#173d32}
+.compare-table{display:grid;gap:7px;margin-top:10px}
+.compare-row{position:relative;display:grid;grid-template-columns:minmax(180px,2fr) repeat(4,minmax(65px,.7fr));gap:8px;align-items:center;padding:9px 10px;border:1px solid rgba(23,61,50,.10);border-radius:10px;background:rgba(255,255,255,.72)}
+.compare-row.best{border-color:rgba(178,138,75,.5);background:#fbf6ec}
+.compare-row.selected{box-shadow:inset 3px 0 0 #173d32}
+.compare-row>div{min-width:0}
+.compare-row small{display:block;color:#777;font-size:.72rem}
+.compare-row strong{display:block;overflow-wrap:anywhere}
+.cheapest-tag{position:absolute;right:8px;top:-9px;background:#173d32;color:#fff;border-radius:999px;padding:2px 7px;font-size:.68rem;font-weight:700}
+.remove-cart-item{margin-top:10px}
+.inline-compare{width:100%}
+@media(max-width:760px){
+  .cart-item-main{flex-direction:column}
+  .price-block{width:100%}
+  .compare-row{grid-template-columns:1fr 1fr 1fr}
+  .compare-row>div:first-child{grid-column:1/-1}
+}
