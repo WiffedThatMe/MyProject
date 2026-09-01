@@ -464,3 +464,30 @@ footer { border-top:1px solid var(--border); padding:25px 0 38px; color:#817d76;
 
 .game-panel{position:relative;overflow:hidden}.eyebrow{font-size:.72rem;font-weight:900;letter-spacing:.16em;color:#b28a4b}.quest-score{display:grid;place-items:center;width:72px;height:72px;border:1px solid rgba(178,138,75,.45);border-radius:50%;background:#fff}.quest-score strong{font-family:Georgia,serif;font-size:1.2rem}.quest-score span{font-size:.7rem;color:#697069}.quest-progress{height:8px;background:#e7e1d6;border-radius:99px;overflow:hidden;margin:12px 0 18px}.quest-progress i{display:block;height:100%;width:0;background:#173d32;transition:.25s}.quest-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:20px}.quest-step{display:grid;place-items:center;gap:5px;padding:9px 5px;background:#f8f4ec;color:#555;border:1px solid #e3dccf}.quest-step b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#e9e2d5}.quest-step.active{background:#173d32;color:#fff}.quest-step.active b{background:#fff;color:#173d32}.quest-screen{display:none;min-height:230px;padding:20px;border:1px solid rgba(23,61,50,.1);border-radius:16px;background:rgba(255,255,255,.62)}.quest-screen.active{display:block}.quest-screen h3{font-family:Georgia,serif;font-size:1.35rem;margin:0 0 6px}.game-fields{display:flex;gap:12px;margin-top:20px}.game-fields label{display:grid;gap:6px;font-weight:800}.tap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:16px}.tap-grid button{padding:13px 9px;background:#fff;color:#253029;border:1px solid #ded8cd}.tap-grid button.picked{background:#173d32;color:#fff;border-color:#173d32;box-shadow:0 5px 14px rgba(23,61,50,.15)}.add-own,.rule-builder,.meal-maker-input{display:flex;gap:8px;margin-top:14px}.add-own input,.meal-maker-input input{flex:1}.quest-actions{display:flex;justify-content:space-between;margin-top:14px}.preference-rules{display:grid;gap:8px;margin:14px 0}.pref-rule{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #e2ddd4}.pref-rule div{display:grid}.pref-rule span{font-size:.82rem;color:#6c716d}.pref-rule button{background:transparent;color:#777;padding:4px 8px}.rule-builder{display:grid;grid-template-columns:1.2fr 1fr 1fr auto}.meal-ideas,.frequent-items{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:15px}.meal-idea,.frequent-item{padding:14px;border:1px solid rgba(23,61,50,.11);border-radius:12px;background:rgba(255,255,255,.7)}.meal-idea div,.frequent-item{display:flex;justify-content:space-between;gap:10px}.meal-idea span,.frequent-item span{font-size:.8rem;color:#7b6849}.meal-idea p{margin:8px 0 0;font-size:.87rem;color:#626a64}.muted{color:#70766f}
 @media(max-width:800px){.quest-steps span{display:none}.tap-grid{grid-template-columns:repeat(2,1fr)}.rule-builder{grid-template-columns:1fr}.meal-ideas,.frequent-items{grid-template-columns:1fr}.add-own,.meal-maker-input{flex-direction:column}}
+
+.coupon-hub{padding:0;overflow:hidden}
+.coupon-hub-summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:rgba(255,255,255,.74)}
+.coupon-hub-summary::-webkit-details-marker{display:none}
+.coupon-hub-summary>div{display:grid;gap:3px}
+.coupon-hub-summary strong{font-family:Georgia,serif;font-size:1.22rem;color:#1d241f}
+.coupon-hub-summary small{color:#6d746e}
+.coupon-hub-open{font-weight:800;color:#173d32;border:1px solid rgba(23,61,50,.18);border-radius:999px;padding:8px 12px;background:#fff}
+.coupon-hub[open] .coupon-hub-open{font-size:0}
+.coupon-hub[open] .coupon-hub-open:after{content:'Hide Coupons';font-size:.88rem}
+.coupon-hub-body{border-top:1px solid rgba(23,61,50,.1);padding:18px}
+.coupon-store-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:5px;border-radius:12px;background:#eee8dc}
+.coupon-store-tab{background:transparent;color:#4b554f;border:0;box-shadow:none}
+.coupon-store-tab.active{background:#173d32;color:#fff}
+.coupon-tab-view{display:none}
+.coupon-tab-view.active{display:block}
+.hidden-control{display:none!important}
+.compact-head{margin-bottom:12px}
+@media(max-width:800px){
+  .coupon-hub-summary{align-items:flex-start}
+  .coupon-hub-open{white-space:nowrap}
+  .coupon-store-tabs{display:grid;grid-template-columns:1fr 1fr}
+  .coupon-store-tab{width:100%}
+}
+
+.legacy-savings-control,.coupon-hub{display:none!important}
+.price-first-note{border-left:4px solid #173d32}

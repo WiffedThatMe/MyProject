@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Coupon Game Plan</title>
-  <meta name="description" content="Compare store prices, Rollbacks, coupons, Ibotta, Fetch, and budgets in one place." />
+  <meta name="description" content="Compare Walmart and Kroger grocery prices, sales, shopping lists and budgets." />
   <meta name="author" content="Mediokore" />
   <meta name="application-name" content="Coupon Game Plan" />
   <link rel="stylesheet" href="styles.css" />
@@ -14,20 +14,20 @@
     <div class="wrap header-inner">
       <div>
         <div class="eyebrow">Coupon Game Plan</div>
-        <h1>Get the most for your money.</h1>
-        <p>Compare store prices, sales, Rollbacks, coupons, Ibotta and Fetch in one cart.</p>
+        <h1>Build the smartest grocery list.</h1>
+        <p>Build a grocery list with Walmart and Kroger prices, sales and store-by-store comparisons.</p>
       </div>
-      <div class="header-badge">Bang for your buck</div>
+      <div class="header-badge">Walmart vs Kroger</div>
     </div>
   </header>
   <div class="freshness-bar">
     <div class="wrap freshness-inner">
       <div class="freshness-copy">
         <span id="freshnessDot" class="freshness-dot"></span>
-        <span><strong id="freshnessStatus">Deal feed ready</strong><small id="lastUpdated">Waiting for refresh</small></span>
+        <span><strong id="freshnessStatus">Price feed ready</strong><small id="lastUpdated">Waiting for refresh</small></span>
       </div>
       <button id="refreshDeals" class="refresh-button" type="button" aria-label="Refresh deals now">
-        <span class="refresh-icon" aria-hidden="true">↻</span> Refresh Deals
+        <span class="refresh-icon" aria-hidden="true">↻</span> Refresh Prices
       </button>
     </div>
   </div>
@@ -67,7 +67,7 @@
           Store
           <select id="store">
             <option value="Compare">Compare All Stores</option>
-            <option value="DG">Dollar General</option>
+            
             <option value="Walmart">Walmart</option>
             <option value="Kroger">Kroger</option>
           </select>
@@ -91,7 +91,7 @@
         </label>
       </div>
 
-      <div class="rewards-block">
+      <div class="rewards-block legacy-savings-control">
         <div class="label">Include rewards</div>
         <div class="reward-grid">
           <label class="reward-chip"><input id="useIbotta" type="checkbox" checked><span><strong>Ibotta</strong><small>Cash back after purchase</small></span></label>
@@ -196,8 +196,8 @@
     <section id="comparePanel" class="panel compare-panel" hidden>
       <div class="section-head">
         <div>
-          <h2>Store Comparison</h2>
-          <p>Same budget and needs, compared side-by-side.</p>
+          <h2>Walmart vs Kroger</h2>
+          <p>Compare the same grocery needs side-by-side and see which store has the better total.</p>
         </div>
       </div>
       <div id="comparison" class="comparison-grid"></div>
@@ -206,70 +206,28 @@
     <section class="panel">
       <div class="section-head">
         <div>
-          <h2>Your Cart</h2>
-          <p>Add any deal you want. Your cart is separated by store, and coupons are never combined across retailers. Brand comparisons stay within the same store.</p>
+          <h2>My Shopping Lists</h2>
+          <p>Add groceries as you browse. Walmart and Kroger stay separated so you know exactly what to buy at each store.</p>
         </div>
-        <button id="clear" class="secondary" type="button">Clear Suggested Cart</button>
+        <button id="clear" class="secondary" type="button">Clear Shopping Lists</button>
       </div>
 
       <div id="summaryText" class="callout">Choose how long the plan needs to last, your household size, budget, and needs. The app will use the best store-specific deals it can verify.</div>
       <div id="rewardSummary" class="reward-summary"></div>
-      <div id="cart" class="cart-list empty"><div class="empty-state">Your recommended items will appear here.</div></div>
+      <div id="cart" class="cart-list empty"><div class="empty-state">Your Walmart and Kroger shopping lists will appear here.</div></div>
     </section>
 
     <section class="panel">
       <div class="section-head">
         <div>
-          <h2>Deals & Store Prices</h2>
-          <p>Select what you want, then compare couponed name brands against cheaper store-brand options.</p>
+          <h2>Walmart & Kroger Prices</h2>
+          <p>Browse products, current prices and sales. Add items to your list and compare Walmart against Kroger.</p>
         </div>
-        <input id="search" class="search" type="search" placeholder="Search deals..." />
+        <input id="search" class="search" type="search" placeholder="Search groceries..." />
       </div>
       <div id="deals" class="deal-grid"></div>
     </section>
-
-
-    <section class="panel live-offers-panel">
-      <div class="section-head">
-        <div>
-          <h2>Live Coupons & Promotions</h2>
-          <p>Current store coupons, cash-back offers, multibuy deals, BOGO offers and spend-threshold promotions found by the live feed.</p>
-        </div>
-        <select id="promotionStore" class="search" aria-label="Filter promotions by store">
-          <option value="All">All stores</option>
-          <option value="DG">Dollar General</option>
-          <option value="Walmart">Walmart</option>
-          <option value="Kroger">Kroger</option>
-        </select>
-      </div>
-      <div id="sourceCoverage" class="source-coverage"><span>Waiting for live source check…</span></div>
-      <div id="promotions" class="promotion-grid"><div class="empty-state">Refresh deals to load current promotions.</div></div>
-    </section>
-
-    <section class="panel coupon-plan-panel">
-      <div class="section-head">
-        <div>
-          <h2>My Coupon Plan</h2>
-          <p>Select coupons you want to use, then record what actually happened at checkout.</p>
-        </div>
-        <button id="clearCouponPlan" class="secondary" type="button">Clear Plan</button>
-      </div>
-
-      <div class="coupon-plan-summary">
-        <article class="stat"><span>Selected</span><strong id="selectedCouponCount">0</strong></article>
-        <article class="stat"><span>Expected savings</span><strong id="expectedCouponSavings">$0.00</strong></article>
-        <article class="stat"><span>Verified used</span><strong id="verifiedCouponCount">0</strong></article>
-        <article class="stat featured"><span>Actual savings</span><strong id="actualCouponSavings">$0.00</strong></article>
-      </div>
-
-      <div id="couponPlanResults" class="coupon-plan-results"></div>
-      <div id="selectedCoupons" class="selected-coupons">
-        <div class="empty-state">Select coupons from Live Coupons & Promotions to build your plan.</div>
-      </div>
-    </section>
-
-
-    <section class="panel history-panel">
+<section class="panel history-panel">
       <div class="section-head">
         <div>
           <h2>Item Cost History</h2>
@@ -281,7 +239,7 @@
       <div id="historyList" class="history-list"><div class="empty-state">No tracked price history yet.</div></div>
     </section>
 
-    <section class="panel explainer">
+    <section class="panel explainer legacy-savings-control">
       <h2>How savings are counted</h2>
       <div class="steps">
         <div><b>1</b><span><strong>Store price</strong><small>Starts with shelf price.</small></span></div>
@@ -372,7 +330,7 @@
         </div>
       </div>
       <div class="store-picker-grid">
-        <article class="store-picker-card">
+        <article class="store-picker-card legacy-savings-control">
           <div><span class="store-badge">Dollar General</span><strong id="dgSelectedStore">Finding nearest store…</strong><small id="dgSelectedAddress"></small></div>
           <button id="changeDGStore" class="secondary" type="button">Choose DG</button>
         </article>

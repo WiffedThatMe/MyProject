@@ -1126,3 +1126,35 @@ function initGamePlanner(){
  renderRules();renderFrequent();showQuest(1);
 }
 initGamePlanner();
+
+
+function initCouponHubTabs(){
+  const storeNamesLong={DG:'Dollar General',Walmart:'Walmart',Kroger:'Kroger'};
+  const descriptions={
+    DG:'Current Dollar General coupons and promotions. These stay separate from every other store.',
+    Walmart:'Current Walmart offers and promotions. These stay separate from every other store.',
+    Kroger:'Current Kroger coupons and promotions. These stay separate from every other store.'
+  };
+  document.querySelectorAll('[data-coupon-tab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const tab=btn.dataset.couponTab;
+      document.querySelectorAll('[data-coupon-tab]').forEach(x=>x.classList.toggle('active',x===btn));
+      const offers=el('couponOffersView'), plan=el('couponPlanView');
+      if(tab==='Plan'){
+        if(offers) offers.classList.remove('active');
+        if(plan) plan.classList.add('active');
+        renderCouponPlan();
+        return;
+      }
+      if(plan) plan.classList.remove('active');
+      if(offers) offers.classList.add('active');
+      const filter=el('promotionStore');
+      if(filter) filter.value=tab;
+      if(el('couponStoreHeading')) el('couponStoreHeading').textContent=`${storeNamesLong[tab]} Coupons`;
+      if(el('couponStoreDescription')) el('couponStoreDescription').textContent=descriptions[tab];
+      renderPromotions();
+    });
+  });
+}
+
+
